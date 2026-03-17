@@ -24,6 +24,14 @@ Next.js 16 · React 19 · TypeScript · Prisma 7 · Supabase · NextAuth v5 · T
 - **tonalli-internal** — Portal interno del equipo (repo separado)
 - Ambos portales comparten la misma base de datos Supabase
 
+## Documentacion
+
+- [Onboarding para devs](docs/ONBOARDING.md) — Empieza aqui
+- [Guia de desarrollo](docs/tonalli-client-dev-guide.md)
+- [Arquitectura del portal cliente](docs/BureauTonalli_Arquitectura_Fase2_Portal_Cliente.docx)
+- [Arquitectura tecnica completa](docs/BureauTonalli_Arquitectura_Tecnica_v2.docx)
+- [CLAUDE.md](CLAUDE.md) — Referencia tecnica para Claude Code
+
 ---
 
 Made with ♥ by [Made by Humans](https://madebyhumans.dev)
