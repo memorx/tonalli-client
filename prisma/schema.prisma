@@ -1,0 +1,453 @@
+// prisma/schema.prisma
+// Bureau Tonalli — Integrated Digital Platform
+// Version 2.0 — Aligned with production tracker and React prototype
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ══════════════════════════════════════════════
+// ENUMS
+// ══════════════════════════════════════════════
+
+enum UserRole {
+  ARTISTIC_CREATOR    // Alonso — creative director, final gate
+  COORDINATOR         // Mar — ops manager, full pipeline
+  LEAD_AESTHETIC      // Flavien — aesthetic validation (gate 1)
+  LEAD_TECHNICAL      // Zach — technical validation (gate 2)
+  DESIGNER            // Execution team
+  SUPPORT             // Ximena — comms, marketing
+  ADMINISTRATIVE      // Marjorie — invoicing, admin
+  CLIENT_CONTACT      // External client contacts
+}
+
+enum ProjectStatus {
+  SETUP
+  INCOMING
+  ORGANIZING
+  IN_PRODUCTION
+  WAITING_AESTHETIC_VALIDATION
+  WAITING_TECHNICAL_VALIDATION
+  READY_FINAL_VALIDATION
+  SENT_TO_CLIENT
+  ON_HOLD_BLOCKED
+  ARCHIVED
+}
+
+enum ProjectPhase {
+  ORGANIZATION
+  PRODUCTION
+  AESTHETIC
+  TECHNICAL
+  FINAL
+}
+
+enum TaskStatus {
+  TO_DO
+  IN_PROGRESS
+  BLOCKED
+  READY_FOR_VALIDATION
+  CHANGES_REQUESTED
+  DONE
+}
+
+enum TaskType {
+  CREATIVE
+  PRODUCTION
+  TECHNICAL
+}
+
+enum ValidationStatus {
+  NOT_REQUIRED
+  WAITING
+  APPROVED
+  REJECTED
+}
+
+enum RiskType {
+  NONE
+  AESTHETIC
+  TECHNICAL
+  EXTERNAL
+}
+
+// ══════════════════════════════════════════════
+// AUTH MODELS (NextAuth.js v5 / Prisma Adapter)
+// ══════════════════════════════════════════════
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ══════════════════════════════════════════════
+// CORE MODELS
+// ══════════════════════════════════════════════
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String
+  role          UserRole
+  avatar        String?
+  image         String?   // NextAuth compatibility
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Auth relations
+  accounts Account[]
+  sessions Session[]
+
+  // Project relations
+  ownedTasks       Task[]    @relation("TaskOwner")
+  validatedTasks   Task[]    @relation("TaskValidator")
+  opsProjects      Project[] @relation("ProjectOpsOwner")
+  leadAestheticFor Project[] @relation("ProjectLeadAesthetic")
+  leadTechnicalFor Project[] @relation("ProjectLeadTechnical")
+
+  // Other relations
+  timeEntries     TimeEntry[]
+  comments        Comment[]
+  notifications   Notification[]
+  aiConversations AIConversation[]
+  uploadedFiles   FileVersion[]  @relation("FileUploader")
+  approvals       Approval[]     @relation("ApprovalReviewer")
+  activityLogs        ActivityLog[]
+  integrationConfigs  IntegrationConfig[]
+
+  // Client contact relation (for CLIENT_CONTACT role)
+  clientId String?
+  client   Client? @relation("ClientContacts", fields: [clientId], references: [id])
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  logo      String?
+  website   String?
+  industry  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  contacts    User[]       @relation("ClientContacts")
+  projects    Project[]
+  invoices    Invoice[]
+  brandAssets BrandAsset[]
+}
+
+model Project {
+  id           String        @id @default(cuid())
+  name         String
+  description  String?
+  status       ProjectStatus @default(SETUP)
+  currentPhase ProjectPhase  @default(ORGANIZATION)
+  priority     Int           @default(2) // 1=urgent, 2=normal, 3=low
+  risk         RiskType      @default(NONE)
+  startDate    DateTime?
+  deadline     DateTime?
+  budget       Float?
+  spentBudget  Float         @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  // Client
+  client   Client @relation(fields: [clientId], references: [id])
+  clientId String
+
+  // Team assignments
+  opsOwner        User   @relation("ProjectOpsOwner", fields: [opsOwnerId], references: [id])
+  opsOwnerId      String
+  leadAesthetic   User   @relation("ProjectLeadAesthetic", fields: [leadAestheticId], references: [id])
+  leadAestheticId String
+  leadTechnical   User   @relation("ProjectLeadTechnical", fields: [leadTechnicalId], references: [id])
+  leadTechnicalId String
+
+  // Related data
+  tasks        Task[]
+  files        FileVersion[]
+  approvals    Approval[]
+  invoices     Invoice[]
+  timeEntries  TimeEntry[]
+  activityLogs ActivityLog[]
+
+  // External IDs (integration sync)
+  motionProjectId String?
+  dropboxFolderId String?
+
+  @@index([clientId])
+  @@index([status])
+  @@index([opsOwnerId])
+}
+
+model Task {
+  id               String           @id @default(cuid())
+  name             String
+  description      String?
+  status           TaskStatus       @default(TO_DO)
+  type             TaskType
+  validationStatus ValidationStatus @default(NOT_REQUIRED)
+  priority         Int              @default(2)
+  dueDate          DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  // Dual assignment: owner executes, validator reviews
+  // RULE: ownerId != validatorId (enforced in API)
+  owner       User    @relation("TaskOwner", fields: [ownerId], references: [id])
+  ownerId     String
+  validator   User?   @relation("TaskValidator", fields: [validatorId], references: [id])
+  validatorId String?
+
+  // Project
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  // Related data
+  timeEntries TimeEntry[]
+  comments    Comment[]
+
+  // External IDs
+  motionTaskId String?
+
+  @@index([projectId])
+  @@index([ownerId])
+  @@index([validatorId])
+  @@index([status])
+}
+
+// ══════════════════════════════════════════════
+// SUPPORTING MODELS
+// ══════════════════════════════════════════════
+
+model Approval {
+  id         String    @id @default(cuid())
+  status     String    @default("PENDING") // PENDING, APPROVED, REJECTED, REVISION_REQUESTED
+  feedback   String?
+  reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  file   FileVersion? @relation(fields: [fileId], references: [id])
+  fileId String?
+
+  reviewer   User   @relation("ApprovalReviewer", fields: [reviewerId], references: [id])
+  reviewerId String
+
+  comments Comment[]
+
+  @@index([projectId])
+  @@index([reviewerId])
+}
+
+model FileVersion {
+  id           String   @id @default(cuid())
+  filename     String
+  mimeType     String
+  size         Int      // Bytes
+  version      Int      @default(1)
+  storageUrl   String   // R2 or Dropbox URL
+  thumbnailUrl String?  // Preview in R2
+  createdAt    DateTime @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  uploader   User   @relation("FileUploader", fields: [uploaderId], references: [id])
+  uploaderId String
+
+  approvals Approval[]
+
+  // External IDs
+  dropboxFileId  String?
+  frameIoAssetId String?
+
+  @@index([projectId])
+}
+
+model TimeEntry {
+  id          String   @id @default(cuid())
+  duration    Int      // Minutes
+  description String?
+  date        DateTime
+  createdAt   DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  task   Task?   @relation(fields: [taskId], references: [id])
+  taskId String?
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  // External IDs
+  jibbleEntryId String?
+
+  @@index([userId])
+  @@index([projectId])
+}
+
+model Invoice {
+  id          String    @id @default(cuid())
+  number      String    @unique
+  status      String    @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE, CANCELLED
+  description String?
+  amount      Float     // Montant HT
+  tax         Float     @default(20) // TVA percentage
+  total       Float     @default(0) // Montant TTC (calculated: amount * (1 + tax/100))
+  currency    String    @default("EUR")
+  issuedAt    DateTime?
+  dueDate     DateTime?
+  paidAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  client   Client @relation(fields: [clientId], references: [id])
+  clientId String
+
+  project   Project? @relation(fields: [projectId], references: [id])
+  projectId String?
+
+  // External IDs
+  evolizInvoiceId String?
+  stripeInvoiceId String?
+
+  @@index([clientId])
+}
+
+model BrandAsset {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // LOGO, COLOR, TYPOGRAPHY, GUIDELINE, TEMPLATE
+  value       String   // Hex color, URL, font name, etc.
+  description String?
+  fileUrl     String?
+  createdAt   DateTime @default(now())
+
+  client   Client @relation(fields: [clientId], references: [id])
+  clientId String
+
+  @@index([clientId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String
+
+  task       Task?     @relation(fields: [taskId], references: [id])
+  taskId     String?
+  approval   Approval? @relation(fields: [approvalId], references: [id])
+  approvalId String?
+
+  @@index([taskId])
+  @@index([authorId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // TASK_ASSIGNED, VALIDATION_PENDING, VALIDATION_APPROVED, VALIDATION_REJECTED, DEADLINE_WARNING, OVERLOADED, etc.
+  title     String
+  message   String
+  channel   String   // IN_APP, EMAIL, SLACK, WHATSAPP
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User   @relation(fields: [userId], references: [id])
+  userId    String
+  projectId String?
+
+  @@index([userId, isRead])
+}
+
+model AIConversation {
+  id        String   @id @default(cuid())
+  agent     String   // ALONSO_ASSISTANT, TONALLI_UNIVERSE, ADMIN_FINANCE, COMMUNICATION, PROSPECTION
+  messages  Json     // Array of {role, content, timestamp}
+  summary   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  @@index([userId])
+}
+
+model IntegrationConfig {
+  id              String   @id @default(cuid())
+  integrationName String   // JIBBLE, DROPBOX, MOTION, GOOGLE_CALENDAR, GMAIL, etc.
+  configJson      String   @db.Text // Encrypted JSON with API keys/tokens
+  isActive        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  @@unique([integrationName, userId])
+  @@index([userId])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  action    String   // PROJECT_CREATED, STATUS_CHANGED, TASK_ASSIGNED, VALIDATION_APPROVED, etc.
+  details   Json?    // {oldStatus, newStatus, ...}
+  createdAt DateTime @default(now())
+
+  user      User    @relation(fields: [userId], references: [id])
+  userId    String
+  project   Project? @relation(fields: [projectId], references: [id])
+  projectId String?
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([createdAt])
+}
