@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getClientSessionForApi } from '@/lib/external-auth'
 import { prisma } from '@/lib/prisma'
-import { logActivity } from '@/lib/activity-log'
+import { logAuditEvent } from '@/lib/activity-log'
 import { createNotifications } from '@/lib/notifications'
 
 const patchSchema = z.object({
@@ -46,7 +46,8 @@ export async function GET(
     }
 
     return NextResponse.json(approval)
-  } catch {
+  } catch (err) {
+    console.error('[api/external/approvals/[id]] unexpected error', { err })
     return NextResponse.json({ error: 'Erreur interne' }, { status: 500 })
   }
 }
@@ -108,12 +109,13 @@ export async function PATCH(
       },
     })
 
-    // Log activity
-    await logActivity({
+    // Audit-grade log: includes request metadata (IP, user-agent)
+    await logAuditEvent({
       userId: session.userId,
       action: action === 'APPROVE' ? 'APPROVAL_APPROVED' : 'APPROVAL_REJECTED',
       projectId: approval.project.id,
-      details: {
+      request: req,
+      metadata: {
         approvalId: id,
         filename: approval.file?.filename,
         status: newStatus,
@@ -146,7 +148,8 @@ export async function PATCH(
     )
 
     return NextResponse.json(updated)
-  } catch {
+  } catch (err) {
+    console.error('[api/external/approvals/[id]] unexpected error', { err })
     return NextResponse.json({ error: 'Erreur interne' }, { status: 500 })
   }
 }
