@@ -122,5 +122,40 @@
     "generic": "An error occurred",
     "notFound": "Page not found",
     "unauthorized": "Access denied"
+  },
+  "email": {
+    "common": {
+      "greeting": "Hello {name},",
+      "footer": "Bureau Tonalli — Creative management platform"
+    },
+    "welcome": {
+      "subject": "Welcome to Bureau Tonalli",
+      "title": "Welcome to {clientName}",
+      "body": "Your client portal is ready. You can now review your projects, approve deliverables, and access your brand universe.",
+      "cta": "Open my portal"
+    },
+    "newApprovalRequest": {
+      "subject": "Approval required — {projectName}",
+      "title": "New file to review",
+      "body": "Click below to review the file and share your feedback.",
+      "cta": "View file"
+    },
+    "approvalConfirmation": {
+      "subjectApproved": "Approval recorded — {fileName}",
+      "subjectRejected": "Changes requested — {fileName}",
+      "titleApproved": "Approval recorded",
+      "titleRejected": "Changes requested",
+      "bodyApproved": "Your approval for \"{fileName}\" has been recorded. The team has been notified.",
+      "bodyRejected": "Your change requests for \"{fileName}\" have been sent to the team.",
+      "feedbackLabel": "Your comment:"
+    },
+    "invoiceAvailable": {
+      "subject": "Invoice {invoiceNumber} available",
+      "title": "New invoice available",
+      "body": "The invoice is now available in your portal.",
+      "amountLabel": "Amount",
+      "dueLabel": "Due",
+      "cta": "View invoice"
+    }
   }
 }

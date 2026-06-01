@@ -122,5 +122,40 @@
     "generic": "Une erreur est survenue",
     "notFound": "Page introuvable",
     "unauthorized": "Accès non autorisé"
+  },
+  "email": {
+    "common": {
+      "greeting": "Bonjour {name},",
+      "footer": "Bureau Tonalli — Plateforme de gestion créative"
+    },
+    "welcome": {
+      "subject": "Bienvenue chez Bureau Tonalli",
+      "title": "Bienvenue chez {clientName}",
+      "body": "Votre espace client est prêt. Vous pouvez désormais consulter vos projets, valider les livrables et accéder à votre univers de marque.",
+      "cta": "Accéder à mon espace"
+    },
+    "newApprovalRequest": {
+      "subject": "Validation requise — {projectName}",
+      "title": "Nouveau fichier à valider",
+      "body": "Cliquez ci-dessous pour examiner le fichier et donner votre avis.",
+      "cta": "Voir le fichier"
+    },
+    "approvalConfirmation": {
+      "subjectApproved": "Validation approuvée — {fileName}",
+      "subjectRejected": "Modifications demandées — {fileName}",
+      "titleApproved": "Validation enregistrée",
+      "titleRejected": "Modifications demandées",
+      "bodyApproved": "Votre approbation pour « {fileName} » a été enregistrée. L'équipe en a été informée.",
+      "bodyRejected": "Vos demandes de modification pour « {fileName} » ont été transmises à l'équipe.",
+      "feedbackLabel": "Votre commentaire :"
+    },
+    "invoiceAvailable": {
+      "subject": "Facture {invoiceNumber} disponible",
+      "title": "Nouvelle facture disponible",
+      "body": "La facture est maintenant accessible dans votre espace.",
+      "amountLabel": "Montant",
+      "dueLabel": "Échéance",
+      "cta": "Voir la facture"
+    }
   }
 }
