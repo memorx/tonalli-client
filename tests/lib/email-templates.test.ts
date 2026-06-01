@@ -34,6 +34,10 @@ import {
   emailNewApprovalRequest,
   emailApprovalConfirmation,
   emailInvoiceAvailable,
+  emailApprovalReminder,
+  emailCommentNotification,
+  emailFileUploaded,
+  emailProjectStatusChange,
 } from '@/lib/email-templates'
 
 const LOCALES = ['fr', 'en'] as const
@@ -127,6 +131,94 @@ describe('emailInvoiceAvailable', () => {
       expect(result.html).toContain('12 500 €')
       expect(result.html).toContain('15 juin 2026')
       expect(result.html).toContain('https://example.com/invoices/42')
+    })
+  }
+})
+
+describe('emailApprovalReminder', () => {
+  for (const locale of LOCALES) {
+    it(`[${locale}] renders project, file, days, and CTA url`, async () => {
+      const result = await emailApprovalReminder({
+        userName: 'Pierre',
+        projectName: 'Campagne Cartier',
+        fileName: 'mockup-final.png',
+        approvalUrl: 'https://example.com/approval/abc',
+        daysPending: 5,
+        locale,
+      })
+
+      expect(result.subject).toContain('Campagne Cartier')
+      expect(result.html).toContain('Pierre')
+      expect(result.html).toContain('mockup-final.png')
+      expect(result.html).toContain('5')
+      expect(result.html).toContain('https://example.com/approval/abc')
+    })
+  }
+})
+
+describe('emailCommentNotification', () => {
+  for (const locale of LOCALES) {
+    it(`[${locale}] renders commenter, file, project, comment text, thread URL`, async () => {
+      const result = await emailCommentNotification({
+        userName: 'Isabelle',
+        commenterName: 'Mar Guixa',
+        projectName: 'Lookbook Givenchy',
+        fileName: 'frame-12.mp4',
+        commentText: 'Le cadrage de la scène 3 est trop serré',
+        threadUrl: 'https://example.com/threads/xyz',
+        locale,
+      })
+
+      expect(result.subject).toContain('Mar Guixa')
+      expect(result.subject).toContain('frame-12.mp4')
+      expect(result.html).toContain('Isabelle')
+      expect(result.html).toContain('Mar Guixa')
+      expect(result.html).toContain('Lookbook Givenchy')
+      expect(result.html).toContain('frame-12.mp4')
+      expect(result.html).toContain('Le cadrage de la scène 3 est trop serré')
+      expect(result.html).toContain('https://example.com/threads/xyz')
+    })
+  }
+})
+
+describe('emailFileUploaded', () => {
+  for (const locale of LOCALES) {
+    it(`[${locale}] renders file, version, project, and project URL`, async () => {
+      const result = await emailFileUploaded({
+        userName: 'Sophie',
+        projectName: 'YSL Spring 2026',
+        fileName: 'concept-v4.psd',
+        fileVersion: 4,
+        projectUrl: 'https://example.com/projects/ysl-spring',
+        locale,
+      })
+
+      expect(result.subject).toContain('YSL Spring 2026')
+      expect(result.html).toContain('Sophie')
+      expect(result.html).toContain('concept-v4.psd')
+      expect(result.html).toContain('4')
+      expect(result.html).toContain('YSL Spring 2026')
+      expect(result.html).toContain('https://example.com/projects/ysl-spring')
+    })
+  }
+})
+
+describe('emailProjectStatusChange', () => {
+  for (const locale of LOCALES) {
+    it(`[${locale}] renders project, phase label, and project URL`, async () => {
+      const result = await emailProjectStatusChange({
+        userName: 'Marie',
+        projectName: 'Initio Parfums Privés — Brand Refresh',
+        phaseLabel: locale === 'fr' ? 'Production' : 'In production',
+        projectUrl: 'https://example.com/projects/initio',
+        locale,
+      })
+
+      expect(result.subject).toContain('Initio Parfums Privés — Brand Refresh')
+      expect(result.html).toContain('Marie')
+      expect(result.html).toContain('Initio Parfums Privés — Brand Refresh')
+      expect(result.html).toContain(locale === 'fr' ? 'Production' : 'In production')
+      expect(result.html).toContain('https://example.com/projects/initio')
     })
   }
 })

@@ -156,6 +156,31 @@
       "amountLabel": "Montant",
       "dueLabel": "Échéance",
       "cta": "Voir la facture"
+    },
+    "approvalReminder": {
+      "subject": "Rappel : validation en attente — {projectName}",
+      "title": "Votre avis est attendu",
+      "body": "Cela fait {days} jour(s) que « {fileName} » attend votre validation.",
+      "cta": "Examiner le fichier"
+    },
+    "commentNotification": {
+      "subject": "{commenterName} a commenté sur {fileName}",
+      "title": "Nouveau commentaire",
+      "intro": "{commenterName} a laissé un commentaire sur « {fileName} » dans {projectName}.",
+      "commentLabel": "Commentaire :",
+      "cta": "Voir le fil"
+    },
+    "fileUploaded": {
+      "subject": "Nouveau fichier — {projectName}",
+      "title": "Nouveau fichier disponible",
+      "body": "« {fileName} » (v{version}) a été ajouté au projet {projectName}.",
+      "cta": "Voir le projet"
+    },
+    "projectStatusChange": {
+      "subject": "{projectName} — {phaseLabel}",
+      "title": "Mise à jour du projet",
+      "body": "Le projet « {projectName} » est maintenant en phase {phaseLabel}.",
+      "cta": "Voir le projet"
     }
   }
 }
