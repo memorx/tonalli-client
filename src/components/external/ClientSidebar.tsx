@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { Link, usePathname } from '@/i18n/navigation'
 import { CLIENT_NAV_ITEMS } from '@/utils/external-constants'
 import { cn } from '@/utils/cn'
 
@@ -12,6 +12,8 @@ interface ClientSidebarProps {
 }
 
 export function ClientSidebar({ clientName, clientLogo, onItemClick }: ClientSidebarProps) {
+  const t = useTranslations('navigation')
+  const tc = useTranslations('common')
   const pathname = usePathname()
 
   return (
@@ -26,7 +28,7 @@ export function ClientSidebar({ clientName, clientLogo, onItemClick }: ClientSid
             BT
           </div>
         )}
-        <span className="text-sm font-semibold text-sidebar-foreground">Bureau Tonalli</span>
+        <span className="text-sm font-semibold text-sidebar-foreground">{tc('appName')}</span>
       </div>
 
       {/* Nav */}
@@ -48,7 +50,7 @@ export function ClientSidebar({ clientName, clientLogo, onItemClick }: ClientSid
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           )
         })}

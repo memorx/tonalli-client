@@ -1,11 +1,14 @@
+import { getTranslations } from 'next-intl/server'
 import { getClientSession } from '@/lib/external-auth'
 import { prisma } from '@/lib/prisma'
 import { ProjectCard } from '@/components/external/ProjectCard'
-import { CLIENT_LABELS } from '@/utils/external-constants'
 import { FolderOpen, CheckCircle } from 'lucide-react'
 
 export default async function ClientProjectsPage() {
   const session = await getClientSession()
+  const tp = await getTranslations('projects')
+  const te = await getTranslations('errors')
+  const tc = await getTranslations('common')
 
   try {
     const projects = await prisma.project.findMany({
@@ -26,18 +29,15 @@ export default async function ClientProjectsPage() {
     return (
       <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-bold">{CLIENT_LABELS.sections.allProjects}</h1>
-          <p className="text-sm text-muted-foreground">
-            {projects.length} projet{projects.length !== 1 ? 's' : ''}
-          </p>
+          <h1 className="text-2xl font-bold">{tp('title')}</h1>
+          <p className="text-sm text-muted-foreground">{tp('count', { count: projects.length })}</p>
         </div>
 
-        {/* Active */}
         {active.length > 0 && (
           <div className="space-y-4">
             <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               <FolderOpen className="h-4 w-4" />
-              {CLIENT_LABELS.sections.activeProjects} ({active.length})
+              {tp('tabs.active')} ({active.length})
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {active.map((project) => (
@@ -54,12 +54,11 @@ export default async function ClientProjectsPage() {
           </div>
         )}
 
-        {/* Completed */}
         {completed.length > 0 && (
           <div className="space-y-4">
             <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               <CheckCircle className="h-4 w-4" />
-              {CLIENT_LABELS.sections.completedProjects} ({completed.length})
+              {tp('tabs.completed')} ({completed.length})
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {completed.map((project) => (
@@ -79,7 +78,7 @@ export default async function ClientProjectsPage() {
         {projects.length === 0 && (
           <div className="rounded-xl border border-border bg-card p-12 text-center">
             <FolderOpen className="mx-auto h-10 w-10 text-muted-foreground" />
-            <p className="mt-3 text-sm text-muted-foreground">{CLIENT_LABELS.empty.projects}</p>
+            <p className="mt-3 text-sm text-muted-foreground">{tp('empty')}</p>
           </div>
         )}
       </div>
@@ -88,8 +87,8 @@ export default async function ClientProjectsPage() {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
         <div className="text-center">
-          <p className="text-lg font-semibold">{CLIENT_LABELS.errors.generic}</p>
-          <p className="mt-1 text-sm text-muted-foreground">Veuillez réessayer.</p>
+          <p className="text-lg font-semibold">{te('generic')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{tc('tryAgain')}</p>
         </div>
       </div>
     )

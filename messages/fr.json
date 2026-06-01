@@ -1,0 +1,126 @@
+{
+  "common": {
+    "appName": "Bureau Tonalli",
+    "portalName": "Espace client",
+    "loading": "Chargement…",
+    "tryAgain": "Veuillez réessayer"
+  },
+  "navigation": {
+    "dashboard": "Tableau de bord",
+    "projects": "Projets",
+    "approvals": "Validations",
+    "brand": "Univers marque",
+    "notifications": "Notifications"
+  },
+  "auth": {
+    "welcome": "Bienvenue",
+    "subtitle": "Connectez-vous pour accéder à votre espace client",
+    "signInWithGoogle": "Se connecter avec Google",
+    "devModeTitle": "MODE DÉVELOPPEMENT",
+    "chooseUser": "Choisir un utilisateur…",
+    "quickLogin": "Connexion rapide (dev)",
+    "footer": "Bureau Tonalli — Plateforme de gestion créative",
+    "errorNotRegistered": "Cette adresse email n'est pas enregistrée. Contactez votre administrateur.",
+    "signOut": "Se déconnecter"
+  },
+  "dashboard": {
+    "welcomeUser": "Bienvenue, {name}",
+    "kpi": {
+      "activeProjects": "Projets actifs",
+      "pendingApprovals": "Validations en attente",
+      "filesToReview": "Fichiers à examiner",
+      "completedThisMonth": "Terminés ce mois"
+    },
+    "sections": {
+      "currentProjects": "Projets en cours",
+      "recentActivity": "Activité récente",
+      "pendingApprovals": "En attente de votre avis"
+    },
+    "empty": {
+      "projects": "Aucun projet en cours",
+      "approvals": "Aucune validation en attente",
+      "activity": "Aucune activité récente"
+    }
+  },
+  "projects": {
+    "title": "Projets",
+    "count": "{count, plural, =0 {Aucun projet} one {# projet} other {# projets}}",
+    "tabs": {
+      "all": "Tous",
+      "active": "En cours",
+      "completed": "Terminés"
+    },
+    "empty": "Aucun projet en cours",
+    "detail": {
+      "start": "Début",
+      "deadline": "Deadline",
+      "filesTitle": "Fichiers",
+      "historyTitle": "Historique"
+    }
+  },
+  "approvals": {
+    "title": "Validations",
+    "count": "{count, plural, =0 {Aucune validation} one {# validation} other {# validations}}",
+    "empty": "Aucune validation en attente",
+    "feedbackRequired": "Veuillez ajouter un commentaire",
+    "feedbackPlaceholder": "Décrivez les modifications souhaitées…",
+    "tabs": {
+      "all": "Toutes",
+      "pending": "En attente",
+      "approved": "Approuvées",
+      "revisionRequested": "Modifiées"
+    },
+    "status": {
+      "PENDING": "En attente",
+      "APPROVED": "Approuvé",
+      "REJECTED": "Rejeté",
+      "REVISION_REQUESTED": "Modifications demandées"
+    },
+    "detail": {
+      "approvedAt": "Approuvé le {date}",
+      "commentLabel": "Commentaire",
+      "noFileAttached": "Aucun fichier associé"
+    }
+  },
+  "brand": {
+    "title": "Univers marque",
+    "sections": {
+      "logos": "Logos",
+      "colors": "Palette de couleurs",
+      "typography": "Typographies",
+      "guidelines": "Guides"
+    },
+    "empty": "Aucun actif de marque disponible"
+  },
+  "files": {
+    "empty": "Aucun fichier disponible",
+    "fileSingular": "Fichier"
+  },
+  "actions": {
+    "viewAll": "Voir tout",
+    "approve": "Approuver",
+    "requestChanges": "Demander des modifications",
+    "download": "Télécharger",
+    "backToProjects": "← Retour aux projets",
+    "backToApprovals": "← Retour aux validations",
+    "retry": "Réessayer"
+  },
+  "priority": {
+    "URGENT": "Urgent",
+    "NORMAL": "Normal",
+    "LOW": "Bas"
+  },
+  "activity": {
+    "PROJECT_CREATED": "Projet créé",
+    "STATUS_CHANGED": "Statut mis à jour",
+    "FILE_UPLOADED": "Nouveau fichier disponible",
+    "APPROVAL_CREATED": "Validation demandée",
+    "APPROVAL_APPROVED": "Validation approuvée",
+    "APPROVAL_REJECTED": "Modifications demandées"
+  },
+  "errors": {
+    "generic": "Une erreur est survenue",
+    "notFound": "Page introuvable",
+    "unauthorized": "Accès non autorisé"
+  }
+}
