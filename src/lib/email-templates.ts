@@ -141,3 +141,107 @@ export async function emailInvoiceAvailable(params: {
     ${foot(t('common.footer'))}`,
   }
 }
+
+export async function emailApprovalReminder(params: {
+  userName: string
+  projectName: string
+  fileName: string
+  approvalUrl: string
+  daysPending: number
+  locale: Locale
+}): Promise<EmailRendered> {
+  const t = await getTranslations({ locale: params.locale, namespace: 'email' })
+  return {
+    subject: t('approvalReminder.subject', { projectName: params.projectName }),
+    html: `${head()}
+      <h2 style="margin: 0 0 8px; font-size: 16px; color: #F5F5F5;">${t('approvalReminder.title')}</h2>
+      <p style="margin: 0 0 16px; color: #888; font-size: 14px;">${t('common.greeting', { name: params.userName })}</p>
+      ${card(
+        `<p style="margin: 0; font-size: 14px;">${t('approvalReminder.body', { days: params.daysPending, fileName: params.fileName })}</p>
+         <p style="margin: 4px 0 0; font-size: 13px; color: #888;">${params.projectName}</p>`,
+        '#EF9F27',
+      )}
+      ${btn(t('approvalReminder.cta'), params.approvalUrl)}
+    ${foot(t('common.footer'))}`,
+  }
+}
+
+export async function emailCommentNotification(params: {
+  userName: string
+  commenterName: string
+  projectName: string
+  fileName: string
+  commentText: string
+  threadUrl: string
+  locale: Locale
+}): Promise<EmailRendered> {
+  const t = await getTranslations({ locale: params.locale, namespace: 'email' })
+  return {
+    subject: t('commentNotification.subject', { commenterName: params.commenterName, fileName: params.fileName }),
+    html: `${head()}
+      <h2 style="margin: 0 0 8px; font-size: 16px; color: #F5F5F5;">${t('commentNotification.title')}</h2>
+      <p style="margin: 0 0 16px; color: #888; font-size: 14px;">${t('common.greeting', { name: params.userName })}</p>
+      <p style="margin: 0 0 12px; color: #E0E0E0; font-size: 14px;">${t('commentNotification.intro', {
+        commenterName: params.commenterName,
+        fileName: params.fileName,
+        projectName: params.projectName,
+      })}</p>
+      ${card(
+        `<p style="margin: 0 0 4px; font-size: 13px; color: #888;"><strong>${t('commentNotification.commentLabel')}</strong></p>
+         <p style="margin: 4px 0 0; font-size: 14px; color: #E0E0E0; font-style: italic;">"${params.commentText}"</p>`,
+      )}
+      ${btn(t('commentNotification.cta'), params.threadUrl)}
+    ${foot(t('common.footer'))}`,
+  }
+}
+
+export async function emailFileUploaded(params: {
+  userName: string
+  projectName: string
+  fileName: string
+  fileVersion: number
+  projectUrl: string
+  locale: Locale
+}): Promise<EmailRendered> {
+  const t = await getTranslations({ locale: params.locale, namespace: 'email' })
+  return {
+    subject: t('fileUploaded.subject', { projectName: params.projectName }),
+    html: `${head()}
+      <h2 style="margin: 0 0 8px; font-size: 16px; color: #F5F5F5;">${t('fileUploaded.title')}</h2>
+      <p style="margin: 0 0 16px; color: #888; font-size: 14px;">${t('common.greeting', { name: params.userName })}</p>
+      ${card(
+        `<p style="margin: 0; font-size: 14px;">${t('fileUploaded.body', {
+          fileName: params.fileName,
+          version: params.fileVersion,
+          projectName: params.projectName,
+        })}</p>`,
+      )}
+      ${btn(t('fileUploaded.cta'), params.projectUrl)}
+    ${foot(t('common.footer'))}`,
+  }
+}
+
+export async function emailProjectStatusChange(params: {
+  userName: string
+  projectName: string
+  /** Already-translated phase label (caller resolves via client-status.ts) */
+  phaseLabel: string
+  projectUrl: string
+  locale: Locale
+}): Promise<EmailRendered> {
+  const t = await getTranslations({ locale: params.locale, namespace: 'email' })
+  return {
+    subject: t('projectStatusChange.subject', { projectName: params.projectName, phaseLabel: params.phaseLabel }),
+    html: `${head()}
+      <h2 style="margin: 0 0 8px; font-size: 16px; color: #F5F5F5;">${t('projectStatusChange.title')}</h2>
+      <p style="margin: 0 0 16px; color: #888; font-size: 14px;">${t('common.greeting', { name: params.userName })}</p>
+      ${card(
+        `<p style="margin: 0; font-size: 14px;">${t('projectStatusChange.body', {
+          projectName: params.projectName,
+          phaseLabel: params.phaseLabel,
+        })}</p>`,
+      )}
+      ${btn(t('projectStatusChange.cta'), params.projectUrl)}
+    ${foot(t('common.footer'))}`,
+  }
+}

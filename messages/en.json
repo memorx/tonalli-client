@@ -156,6 +156,31 @@
       "amountLabel": "Amount",
       "dueLabel": "Due",
       "cta": "View invoice"
+    },
+    "approvalReminder": {
+      "subject": "Reminder: pending approval — {projectName}",
+      "title": "Your review is awaited",
+      "body": "It's been {days} day(s) since \"{fileName}\" has been waiting for your review.",
+      "cta": "Review the file"
+    },
+    "commentNotification": {
+      "subject": "{commenterName} commented on {fileName}",
+      "title": "New comment",
+      "intro": "{commenterName} left a comment on \"{fileName}\" in {projectName}.",
+      "commentLabel": "Comment:",
+      "cta": "View thread"
+    },
+    "fileUploaded": {
+      "subject": "New file — {projectName}",
+      "title": "New file available",
+      "body": "\"{fileName}\" (v{version}) was added to project {projectName}.",
+      "cta": "View project"
+    },
+    "projectStatusChange": {
+      "subject": "{projectName} — {phaseLabel}",
+      "title": "Project update",
+      "body": "Project \"{projectName}\" is now in {phaseLabel} phase.",
+      "cta": "View project"
     }
   }
 }

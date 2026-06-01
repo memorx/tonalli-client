@@ -28,6 +28,23 @@ const REQUIRED_EMAIL_KEYS = [
   'invoiceAvailable.amountLabel',
   'invoiceAvailable.dueLabel',
   'invoiceAvailable.cta',
+  'approvalReminder.subject',
+  'approvalReminder.title',
+  'approvalReminder.body',
+  'approvalReminder.cta',
+  'commentNotification.subject',
+  'commentNotification.title',
+  'commentNotification.intro',
+  'commentNotification.commentLabel',
+  'commentNotification.cta',
+  'fileUploaded.subject',
+  'fileUploaded.title',
+  'fileUploaded.body',
+  'fileUploaded.cta',
+  'projectStatusChange.subject',
+  'projectStatusChange.title',
+  'projectStatusChange.body',
+  'projectStatusChange.cta',
 ]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
