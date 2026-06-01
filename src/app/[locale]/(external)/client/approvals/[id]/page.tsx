@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
+import { Link } from '@/i18n/navigation'
 import { getClientSession } from '@/lib/external-auth'
 import { prisma } from '@/lib/prisma'
 import { ApprovalActions } from '@/components/external/ApprovalActions'
-import { CLIENT_LABELS, APPROVAL_STATUS_LABELS, APPROVAL_STATUS_COLORS } from '@/utils/external-constants'
+import { APPROVAL_STATUS_COLORS } from '@/utils/external-constants'
 import { cn } from '@/utils/cn'
 import { ArrowLeft, Download, Image, Film, FileText, File } from 'lucide-react'
 import dayjs from 'dayjs'
@@ -33,6 +34,12 @@ export default async function ClientApprovalDetailPage({
   const session = await getClientSession()
   const { id } = await params
 
+  const ta = await getTranslations('actions')
+  const tap = await getTranslations('approvals')
+  const tf = await getTranslations('files')
+  const te = await getTranslations('errors')
+  const tc = await getTranslations('common')
+
   try {
     const approval = await prisma.approval.findFirst({
       where: { id, project: { clientId: session.clientId } },
@@ -57,19 +64,14 @@ export default async function ClientApprovalDetailPage({
 
     return (
       <div className="space-y-6">
-        {/* Back */}
-        <Link
-          href="/client/approvals"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
+        <Link href="/client/approvals" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
-          {CLIENT_LABELS.actions.backToApprovals}
+          {ta('backToApprovals')}
         </Link>
 
-        {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold">{approval.file?.filename ?? 'Fichier'}</h1>
+            <h1 className="text-xl font-bold">{approval.file?.filename ?? tf('fileSingular')}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
               <Link href={`/client/projects/${approval.project.id}`} className="hover:text-primary hover:underline">
                 {approval.project.name}
@@ -83,33 +85,20 @@ export default async function ClientApprovalDetailPage({
             </div>
           </div>
           <span className={cn('inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium', APPROVAL_STATUS_COLORS[approval.status])}>
-            {APPROVAL_STATUS_LABELS[approval.status]}
+            {tap(`status.${approval.status}`)}
           </span>
         </div>
 
-        {/* File preview */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           {approval.file ? (
             <div className="flex min-h-[400px] items-center justify-center bg-black/20 p-4">
               {approval.file.mimeType.startsWith('image/') ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={approval.file.storageUrl}
-                  alt={approval.file.filename}
-                  className="max-h-[600px] w-auto object-contain"
-                />
+                <img src={approval.file.storageUrl} alt={approval.file.filename} className="max-h-[600px] w-auto object-contain" />
               ) : approval.file.mimeType.includes('pdf') ? (
-                <iframe
-                  src={approval.file.storageUrl}
-                  className="h-[600px] w-full"
-                  title={approval.file.filename}
-                />
+                <iframe src={approval.file.storageUrl} className="h-[600px] w-full" title={approval.file.filename} />
               ) : approval.file.mimeType.startsWith('video/') ? (
-                <video
-                  controls
-                  className="max-h-[600px] w-auto"
-                  src={approval.file.storageUrl}
-                />
+                <video controls className="max-h-[600px] w-auto" src={approval.file.storageUrl} />
               ) : (
                 <div className="text-center">
                   <FileIcon className="mx-auto h-16 w-16 text-muted-foreground" />
@@ -121,38 +110,35 @@ export default async function ClientApprovalDetailPage({
                     className="mt-2 inline-flex items-center gap-1 text-sm text-primary hover:underline"
                   >
                     <Download className="h-4 w-4" />
-                    {CLIENT_LABELS.actions.download}
+                    {ta('download')}
                   </a>
                 </div>
               )}
             </div>
           ) : (
             <div className="flex min-h-[400px] items-center justify-center">
-              <p className="text-sm text-muted-foreground">Aucun fichier associé</p>
+              <p className="text-sm text-muted-foreground">{tap('detail.noFileAttached')}</p>
             </div>
           )}
         </div>
 
-        {/* Approved info */}
         {approval.status === 'APPROVED' && approval.reviewedAt && (
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
             <p className="text-sm font-medium text-emerald-300">
-              Approuvé le {dayjs(approval.reviewedAt).format('D MMMM YYYY à HH:mm')}
+              {tap('detail.approvedAt', { date: dayjs(approval.reviewedAt).format('D MMMM YYYY, HH:mm') })}
             </p>
           </div>
         )}
 
-        {/* Feedback */}
         {approval.feedback && (
           <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-orange-300 mb-1">
-              Commentaire
+              {tap('detail.commentLabel')}
             </p>
             <p className="text-sm text-orange-200">{approval.feedback}</p>
           </div>
         )}
 
-        {/* Actions */}
         <ApprovalActions approvalId={approval.id} status={approval.status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVISION_REQUESTED'} />
       </div>
     )
@@ -160,8 +146,8 @@ export default async function ClientApprovalDetailPage({
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
         <div className="text-center">
-          <p className="text-lg font-semibold">{CLIENT_LABELS.errors.generic}</p>
-          <p className="mt-1 text-sm text-muted-foreground">Veuillez réessayer.</p>
+          <p className="text-lg font-semibold">{te('generic')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{tc('tryAgain')}</p>
         </div>
       </div>
     )

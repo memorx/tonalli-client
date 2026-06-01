@@ -14,8 +14,8 @@ export interface ClientSession {
 
 export async function getClientSession(): Promise<ClientSession> {
   const session = await auth()
-  if (!session?.user) redirect('/login')
-  if (session.user.role !== 'CLIENT_CONTACT') redirect('/login')
+  if (!session?.user) redirect('/fr/login')
+  if (session.user.role !== 'CLIENT_CONTACT') redirect('/fr/login')
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
@@ -30,7 +30,7 @@ export async function getClientSession(): Promise<ClientSession> {
     },
   })
 
-  if (!user?.clientId || !user.client) redirect('/login')
+  if (!user?.clientId || !user.client) redirect('/fr/login')
 
   return {
     userId: user.id,

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
+import { useTranslations } from 'next-intl'
 import { Loader2 } from 'lucide-react'
 import type { UserRole } from '@/generated/prisma/client'
 
@@ -18,6 +19,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ devUsers, isDev }: LoginFormProps) {
+  const t = useTranslations('auth')
   const [loading, setLoading] = useState(false)
   const [devLoading, setDevLoading] = useState(false)
   const [selectedUser, setSelectedUser] = useState('')
@@ -63,7 +65,7 @@ export function LoginForm({ devUsers, isDev }: LoginFormProps) {
             />
           </svg>
         )}
-        Se connecter avec Google
+        {t('signInWithGoogle')}
       </button>
 
       {/* Dev mode login */}
@@ -74,7 +76,7 @@ export function LoginForm({ devUsers, isDev }: LoginFormProps) {
               <div className="w-full border-t border-neutral-700" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-neutral-900 px-2 text-neutral-500">Mode développement</span>
+              <span className="bg-neutral-900 px-2 text-neutral-500">{t('devModeTitle')}</span>
             </div>
           </div>
 
@@ -84,7 +86,7 @@ export function LoginForm({ devUsers, isDev }: LoginFormProps) {
               onChange={(e) => setSelectedUser(e.target.value)}
               className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2.5 text-sm text-white focus:border-neutral-500 focus:outline-none"
             >
-              <option value="">Choisir un utilisateur...</option>
+              <option value="">{t('chooseUser')}</option>
               {devUsers.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name} — {u.roleLabel}
@@ -98,7 +100,7 @@ export function LoginForm({ devUsers, isDev }: LoginFormProps) {
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-black transition-colors hover:bg-neutral-200 disabled:opacity-50"
             >
               {devLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Connexion rapide (dev)
+              {t('quickLogin')}
             </button>
           </div>
         </>

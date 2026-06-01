@@ -1,8 +1,13 @@
+'use client'
+
+import { useTranslations } from 'next-intl'
 import { cn } from '@/utils/cn'
-import { CLIENT_PRIORITY_LABELS, CLIENT_PRIORITY_COLORS } from '@/utils/external-constants'
+import { CLIENT_PRIORITY_COLORS, PRIORITY_KEY } from '@/utils/external-constants'
 
 export function ClientPriorityBadge({ priority }: { priority: number }) {
-  const label = CLIENT_PRIORITY_LABELS[priority] ?? `P${priority}`
+  const t = useTranslations('priority')
+  const key = PRIORITY_KEY[priority]
+  const label = key ? t(key) : `P${priority}`
   const colors = CLIENT_PRIORITY_COLORS[priority] ?? 'bg-slate-500/20 text-slate-300 border-slate-500/30'
 
   return (

@@ -1,6 +1,7 @@
 'use client'
 
 import { signOut } from 'next-auth/react'
+import { useTranslations } from 'next-intl'
 import { Menu, Bell, LogOut } from 'lucide-react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/Avatar'
 import {
@@ -36,6 +37,7 @@ export function ClientHeader({
   clientName,
   onMenuClick,
 }: ClientHeaderProps) {
+  const tAuth = useTranslations('auth')
   return (
     <header className="flex h-14 items-center justify-between border-b border-border px-4">
       {/* Left */}
@@ -80,7 +82,7 @@ export function ClientHeader({
               className="text-destructive focus:text-destructive"
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Se déconnecter
+              {tAuth('signOut')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

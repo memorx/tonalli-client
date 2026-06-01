@@ -1,0 +1,126 @@
+{
+  "common": {
+    "appName": "Bureau Tonalli",
+    "portalName": "Client portal",
+    "loading": "Loading…",
+    "tryAgain": "Please try again"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "approvals": "Approvals",
+    "brand": "Brand universe",
+    "notifications": "Notifications"
+  },
+  "auth": {
+    "welcome": "Welcome",
+    "subtitle": "Sign in to access your client portal",
+    "signInWithGoogle": "Sign in with Google",
+    "devModeTitle": "DEVELOPMENT MODE",
+    "chooseUser": "Choose a user…",
+    "quickLogin": "Quick login (dev)",
+    "footer": "Bureau Tonalli — Creative management platform",
+    "errorNotRegistered": "This email is not registered. Please contact your administrator.",
+    "signOut": "Sign out"
+  },
+  "dashboard": {
+    "welcomeUser": "Welcome, {name}",
+    "kpi": {
+      "activeProjects": "Active projects",
+      "pendingApprovals": "Pending approvals",
+      "filesToReview": "Files to review",
+      "completedThisMonth": "Completed this month"
+    },
+    "sections": {
+      "currentProjects": "Current projects",
+      "recentActivity": "Recent activity",
+      "pendingApprovals": "Awaiting your review"
+    },
+    "empty": {
+      "projects": "No active projects",
+      "approvals": "No pending approvals",
+      "activity": "No recent activity"
+    }
+  },
+  "projects": {
+    "title": "Projects",
+    "count": "{count, plural, =0 {No projects} one {# project} other {# projects}}",
+    "tabs": {
+      "all": "All",
+      "active": "Active",
+      "completed": "Completed"
+    },
+    "empty": "No active projects",
+    "detail": {
+      "start": "Start",
+      "deadline": "Deadline",
+      "filesTitle": "Files",
+      "historyTitle": "History"
+    }
+  },
+  "approvals": {
+    "title": "Approvals",
+    "count": "{count, plural, =0 {No approvals} one {# approval} other {# approvals}}",
+    "empty": "No pending approvals",
+    "feedbackRequired": "Please add a comment",
+    "feedbackPlaceholder": "Describe the requested changes…",
+    "tabs": {
+      "all": "All",
+      "pending": "Pending",
+      "approved": "Approved",
+      "revisionRequested": "Changes requested"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "REVISION_REQUESTED": "Changes requested"
+    },
+    "detail": {
+      "approvedAt": "Approved on {date}",
+      "commentLabel": "Comment",
+      "noFileAttached": "No file attached"
+    }
+  },
+  "brand": {
+    "title": "Brand universe",
+    "sections": {
+      "logos": "Logos",
+      "colors": "Color palette",
+      "typography": "Typography",
+      "guidelines": "Guidelines"
+    },
+    "empty": "No brand assets available"
+  },
+  "files": {
+    "empty": "No files available",
+    "fileSingular": "File"
+  },
+  "actions": {
+    "viewAll": "View all",
+    "approve": "Approve",
+    "requestChanges": "Request changes",
+    "download": "Download",
+    "backToProjects": "← Back to projects",
+    "backToApprovals": "← Back to approvals",
+    "retry": "Retry"
+  },
+  "priority": {
+    "URGENT": "Urgent",
+    "NORMAL": "Normal",
+    "LOW": "Low"
+  },
+  "activity": {
+    "PROJECT_CREATED": "Project created",
+    "STATUS_CHANGED": "Status updated",
+    "FILE_UPLOADED": "New file available",
+    "APPROVAL_CREATED": "Approval requested",
+    "APPROVAL_APPROVED": "Approval granted",
+    "APPROVAL_REJECTED": "Changes requested"
+  },
+  "errors": {
+    "generic": "An error occurred",
+    "notFound": "Page not found",
+    "unauthorized": "Access denied"
+  }
+}

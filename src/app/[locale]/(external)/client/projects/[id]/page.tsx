@@ -1,12 +1,13 @@
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
+import { Link } from '@/i18n/navigation'
 import { getClientSession } from '@/lib/external-auth'
 import { prisma } from '@/lib/prisma'
 import { ClientPhaseBadge } from '@/components/external/ClientPhaseBadge'
 import { ClientPriorityBadge } from '@/components/external/ClientPriorityBadge'
 import { ProjectProgressBar } from '@/components/external/ProjectProgressBar'
 import { getClientPhase, isVisibleStatusChange, CLIENT_PHASE_LABELS } from '@/utils/client-status'
-import { CLIENT_LABELS, CLIENT_ACTIVITY_LABELS, CLIENT_VISIBLE_ACTIONS, APPROVAL_STATUS_LABELS, APPROVAL_STATUS_COLORS } from '@/utils/external-constants'
+import { CLIENT_VISIBLE_ACTIONS, APPROVAL_STATUS_COLORS } from '@/utils/external-constants'
 import { cn } from '@/utils/cn'
 import { ArrowLeft, Calendar, Clock, Image, Film, FileText, File } from 'lucide-react'
 import type { ProjectStatus } from '@/generated/prisma/client'
@@ -36,6 +37,15 @@ export default async function ClientProjectDetailPage({
 }) {
   const session = await getClientSession()
   const { id } = await params
+
+  const tp = await getTranslations('projects')
+  const ta = await getTranslations('actions')
+  const tact = await getTranslations('activity')
+  const tap = await getTranslations('approvals')
+  const tf = await getTranslations('files')
+  const td = await getTranslations('dashboard')
+  const te = await getTranslations('errors')
+  const tc = await getTranslations('common')
 
   try {
     const project = await prisma.project.findFirst({
@@ -95,16 +105,11 @@ export default async function ClientProjectDetailPage({
 
     return (
       <div className="space-y-6">
-        {/* Back link */}
-        <Link
-          href="/client/projects"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
+        <Link href="/client/projects" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
-          {CLIENT_LABELS.actions.backToProjects}
+          {ta('backToProjects')}
         </Link>
 
-        {/* Header */}
         <div>
           <div className="flex flex-wrap items-start gap-3">
             <h1 className="text-2xl font-bold">{project.name}</h1>
@@ -115,34 +120,31 @@ export default async function ClientProjectDetailPage({
             {project.startDate && (
               <span className="inline-flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
-                Début: {dayjs(project.startDate).format('D MMM YYYY')}
+                {tp('detail.start')}: {dayjs(project.startDate).format('D MMM YYYY')}
               </span>
             )}
             {project.deadline && (
               <span className="inline-flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
-                Deadline: {dayjs(project.deadline).format('D MMM YYYY')}
+                {tp('detail.deadline')}: {dayjs(project.deadline).format('D MMM YYYY')}
               </span>
             )}
           </div>
         </div>
 
-        {/* Progress */}
         <div className="rounded-xl border border-border bg-card p-5">
           <ProjectProgressBar currentPhase={phase} />
         </div>
 
-        {/* Description */}
         {project.description && (
           <p className="text-sm text-muted-foreground">{project.description}</p>
         )}
 
-        {/* Files + Timeline grid */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Files */}
           <div className="lg:col-span-2 space-y-4">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Fichiers ({project.files.length})
+              {tp('detail.filesTitle')} ({project.files.length})
             </h2>
 
             {project.files.length > 0 ? (
@@ -156,11 +158,7 @@ export default async function ClientProjectDetailPage({
                       <div className="flex items-start gap-3">
                         {file.thumbnailUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={file.thumbnailUrl}
-                            alt=""
-                            className="h-12 w-12 rounded object-cover"
-                          />
+                          <img src={file.thumbnailUrl} alt="" className="h-12 w-12 rounded object-cover" />
                         ) : (
                           <div className="flex h-12 w-12 items-center justify-center rounded bg-secondary">
                             <FileIcon className="h-6 w-6 text-muted-foreground" />
@@ -177,7 +175,7 @@ export default async function ClientProjectDetailPage({
                         <div className="mt-2">
                           <Link href={`/client/approvals/${approval.id}`}>
                             <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium hover:opacity-80', APPROVAL_STATUS_COLORS[approval.status])}>
-                              {APPROVAL_STATUS_LABELS[approval.status]}
+                              {tap(`status.${approval.status}`)}
                             </span>
                           </Link>
                         </div>
@@ -188,7 +186,7 @@ export default async function ClientProjectDetailPage({
               </div>
             ) : (
               <div className="rounded-xl border border-border bg-card p-6 text-center">
-                <p className="text-sm text-muted-foreground">{CLIENT_LABELS.empty.files}</p>
+                <p className="text-sm text-muted-foreground">{tf('empty')}</p>
               </div>
             )}
           </div>
@@ -196,7 +194,7 @@ export default async function ClientProjectDetailPage({
           {/* Timeline */}
           <div className="space-y-4">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Historique
+              {tp('detail.historyTitle')}
             </h2>
 
             {visibleActivity.length > 0 ? (
@@ -206,9 +204,7 @@ export default async function ClientProjectDetailPage({
 
                   return (
                     <div key={log.id} className="rounded-lg border border-border bg-card p-3">
-                      <p className="text-sm font-medium">
-                        {CLIENT_ACTIVITY_LABELS[log.action] ?? log.action}
-                      </p>
+                      <p className="text-sm font-medium">{tact(log.action)}</p>
                       {log.action === 'STATUS_CHANGED' && details?.newStatus && (
                         <p className="text-xs text-primary">
                           {CLIENT_PHASE_LABELS[getClientPhase(details.newStatus as ProjectStatus)]}
@@ -223,7 +219,7 @@ export default async function ClientProjectDetailPage({
               </div>
             ) : (
               <div className="rounded-xl border border-border bg-card p-6 text-center">
-                <p className="text-sm text-muted-foreground">{CLIENT_LABELS.empty.activity}</p>
+                <p className="text-sm text-muted-foreground">{td('empty.activity')}</p>
               </div>
             )}
           </div>
@@ -234,8 +230,8 @@ export default async function ClientProjectDetailPage({
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
         <div className="text-center">
-          <p className="text-lg font-semibold">{CLIENT_LABELS.errors.generic}</p>
-          <p className="mt-1 text-sm text-muted-foreground">Veuillez réessayer.</p>
+          <p className="text-lg font-semibold">{te('generic')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{tc('tryAgain')}</p>
         </div>
       </div>
     )

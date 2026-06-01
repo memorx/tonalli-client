@@ -1,4 +1,5 @@
 import NextAuth from 'next-auth'
+import type {} from 'next-auth/jwt'
 import Google from 'next-auth/providers/google'
 import Credentials from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@auth/prisma-adapter'
@@ -21,7 +22,7 @@ declare module 'next-auth' {
   }
 }
 
-declare module '@auth/core/jwt' {
+declare module 'next-auth/jwt' {
   interface JWT {
     id: string
     role: UserRole

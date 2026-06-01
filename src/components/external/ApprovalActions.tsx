@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { useRouter } from '@/i18n/navigation'
 import { CheckCircle, Edit3, Loader2 } from 'lucide-react'
 
 type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVISION_REQUESTED'
@@ -12,6 +13,9 @@ interface ApprovalActionsProps {
 }
 
 export function ApprovalActions({ approvalId, status }: ApprovalActionsProps) {
+  const t = useTranslations('approvals')
+  const ta = useTranslations('actions')
+  const te = useTranslations('errors')
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
@@ -31,12 +35,12 @@ export function ApprovalActions({ approvalId, status }: ApprovalActionsProps) {
       })
       if (!res.ok) {
         const data = await res.json()
-        setError(data.error ?? 'Une erreur est survenue')
+        setError(data.error ?? te('generic'))
         return
       }
       router.refresh()
     } catch {
-      setError('Une erreur est survenue')
+      setError(te('generic'))
     } finally {
       setLoading(false)
     }
@@ -49,7 +53,7 @@ export function ApprovalActions({ approvalId, status }: ApprovalActionsProps) {
     }
 
     if (!feedback.trim()) {
-      setError('Veuillez ajouter un commentaire')
+      setError(t('feedbackRequired'))
       return
     }
 
@@ -63,12 +67,12 @@ export function ApprovalActions({ approvalId, status }: ApprovalActionsProps) {
       })
       if (!res.ok) {
         const data = await res.json()
-        setError(data.error ?? 'Une erreur est survenue')
+        setError(data.error ?? te('generic'))
         return
       }
       router.refresh()
     } catch {
-      setError('Une erreur est survenue')
+      setError(te('generic'))
     } finally {
       setLoading(false)
     }
@@ -84,7 +88,7 @@ export function ApprovalActions({ approvalId, status }: ApprovalActionsProps) {
         <textarea
           value={feedback}
           onChange={(e) => setFeedback(e.target.value)}
-          placeholder="Décrivez les modifications souhaitées..."
+          placeholder={t('feedbackPlaceholder')}
           className="w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[100px]"
         />
       )}
@@ -96,7 +100,7 @@ export function ApprovalActions({ approvalId, status }: ApprovalActionsProps) {
           className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-          Approuver
+          {ta('approve')}
         </button>
         <button
           onClick={handleReject}
@@ -104,7 +108,7 @@ export function ApprovalActions({ approvalId, status }: ApprovalActionsProps) {
           className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50 transition-colors"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit3 className="h-4 w-4" />}
-          Demander des modifications
+          {ta('requestChanges')}
         </button>
       </div>
     </div>
