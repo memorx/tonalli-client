@@ -20,7 +20,7 @@ Portal externo (cliente) de Bureau Tonalli, una agencia creativa de moda de lujo
 | ORM | Prisma 7 (driver adapters) | Schema shared with internal portal |
 | Auth | NextAuth.js v5 (Auth.js) | Google OAuth, JWT strategy |
 | Validation | Zod | Request validation |
-| Testing | Vitest | Unit tests |
+| Testing | Vitest 4 | 228 tests en 9 archivos, entorno node |
 | Deploy | Vercel | Separate project from internal |
 
 ---
@@ -85,7 +85,18 @@ The client sees a simplified 5-phase view of project status:
 
 1. Client contacts have role `CLIENT_CONTACT` and a `clientId` foreign key
 2. `getClientSession()` validates role + clientId, redirects unauthorized users
-3. All data queries are scoped to `session.clientId` — clients ONLY see their own data
+3. All data queries are scoped to `session.clientId` — clients ONLY see their own data.
+   Lo vigila `tests/app/external-pages-tenancy.test.tsx`, que afirma sobre los
+   ARGUMENTOS con que cada una de las 6 páginas llama a Prisma, no sobre el HTML.
+   Es la frontera real: una aserción sobre lo pintado pasaría igual si la consulta
+   trajera de más y el componente casualmente no lo mostrara.
+
+   Ojo con el historial del detalle de proyecto: su `where` es
+   `{ projectId, action: { in: … } }` y NO menciona la marca. Es seguro sólo
+   porque corre después de que la página resolvió el proyecto con
+   `findFirst({ id, clientId })` y llamó a `notFound()`. Mover esa consulta arriba
+   del guard, o pasarle el id crudo de la URL en vez de `project.id`, filtraría el
+   historial de otra marca sin tocar una sola línea que mencione `clientId`.
 4. Non-CLIENT_CONTACT users are redirected to `/login`
 
 ### Approval Workflow
@@ -132,7 +143,12 @@ NEXTAUTH_SECRET=     # Same secret as internal portal
 NEXTAUTH_URL=        # http://localhost:3001 (or production URL)
 GOOGLE_CLIENT_ID=    # Google OAuth
 GOOGLE_CLIENT_SECRET=
-ENABLE_DEV_LOGIN=    # "true" to enable dev login dropdown
+ENABLE_DEV_LOGIN=    # "true" to enable dev login dropdown.
+                     # NO funciona en un build de producción: el provider exige
+                     # además NODE_ENV !== 'production'. Autentica con solo un
+                     # userId, sin contraseña, así que en producción sería una
+                     # puerta a la cuenta de cualquier contacto. Ver
+                     # tests/lib/dev-login-gate.test.ts.
 ```
 
 ---
