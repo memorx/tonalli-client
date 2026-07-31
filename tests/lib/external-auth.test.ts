@@ -165,14 +165,30 @@ beforeEach(() => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('cobertura del enum de roles', () => {
-  it('los siete roles internos del schema están en la matriz', () => {
+  it('los seis roles internos del schema están en la matriz', () => {
     // Este assert es el centinela de la lista derivada: si el enum crece y el rol nuevo
     // no aparece, o si alguien lo reescribe a mano y se le olvida uno, salta aquí.
-    expect(INTERNAL_ROLES).toHaveLength(7)
+    //
+    // Eran siete hasta que este repo sincronizó su schema.prisma con el del portal
+    // interno. El número no bajó por un cambio de hoy: LEAD_AESTHETIC y LEAD_TECHNICAL
+    // se fusionaron en CHEF_PROJECT hace meses, y este repo seguía declarándolos porque
+    // su copia del esquema se había quedado atrás.
+    expect(INTERNAL_ROLES).toHaveLength(6)
     expect(INTERNAL_ROLES).toContain('DESIGNER')
     expect(INTERNAL_ROLES).toContain('COORDINATOR')
     expect(INTERNAL_ROLES).toContain('ARTISTIC_CREATOR')
+    expect(INTERNAL_ROLES).toContain('CHEF_PROJECT')
     expect(INTERNAL_ROLES).not.toContain('CLIENT_CONTACT')
+  })
+
+  it('los roles fusionados no vuelven a aparecer', () => {
+    // Vale más que el conteo: el CLAUDE.md del portal interno los marca como
+    // "REMOVED — do not reintroduce". Si alguien los reintroduce en el schema,
+    // el portal del cliente empezaría a tratar como internos a roles que la base
+    // de datos no reconoce.
+    const roles = Object.values(UserRole) as string[]
+    expect(roles).not.toContain('LEAD_AESTHETIC')
+    expect(roles).not.toContain('LEAD_TECHNICAL')
   })
 })
 

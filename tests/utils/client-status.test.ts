@@ -31,13 +31,14 @@ import {
 // (matriz de transiciones incluida) se deriva de ESTA constante, no de la de producción.
 const EXPECTED_PHASE: Record<string, ClientPhase> = {
   SETUP: 'PREPARATION',
-  INCOMING: 'PREPARATION',
-  ORGANIZING: 'PREPARATION',
+  CREATED: 'PREPARATION',
   ON_HOLD_BLOCKED: 'PREPARATION',
   IN_PRODUCTION: 'PRODUCTION',
-  WAITING_AESTHETIC_VALIDATION: 'REVIEW',
-  WAITING_TECHNICAL_VALIDATION: 'REVIEW',
-  READY_FINAL_VALIDATION: 'REVIEW',
+  // Gate 1 (coordinación) y Gate 2 (certificación del director artístico) son
+  // dos pasos internos del mismo momento. El cliente ve "en revisión" y no
+  // nuestra mecánica.
+  GATE_1: 'REVIEW',
+  GATE_2: 'REVIEW',
   SENT_TO_CLIENT: 'YOUR_TURN',
   ARCHIVED: 'COMPLETE',
 }
@@ -59,6 +60,17 @@ const LEGACY_STATUSES = [
   'DRAFT',
   'in_production',
   '',
+  // Los cinco que el portal interno eliminó del enum. Borrarlos del enum NO los
+  // borra del historial: las filas de ActivityLog escritas antes del refactor
+  // siguen teniendo estos strings en details.newStatus, y el dashboard los
+  // castea a ProjectStatus sin validar. Son legacy de verdad, no hipotéticos —
+  // este repo los tuvo declarados como estatus válidos hasta que se sincronizó
+  // el esquema.
+  'INCOMING',
+  'ORGANIZING',
+  'WAITING_AESTHETIC_VALIDATION',
+  'WAITING_TECHNICAL_VALIDATION',
+  'READY_FINAL_VALIDATION',
 ]
 
 // Claves que existen en Object.prototype y por tanto responden a un lookup por índice
@@ -103,28 +115,28 @@ describe('CLIENT_PHASE_MAP', () => {
 })
 
 describe('getClientPhase', () => {
-  it('resuelve los diez estatus del schema', () => {
+  it('resuelve los ocho estatus del schema', () => {
     for (const status of ALL_STATUSES) {
       expect(getClientPhase(status), `getClientPhase(${status})`).toBe(EXPECTED_PHASE[status])
     }
   })
 
-  it('agrupa en PREPARATION los cuatro estatus previos a producción', () => {
+  it('agrupa en PREPARATION los tres estatus previos a producción', () => {
     // Fijamos el agrupamiento por fase de forma explícita además de por tabla: es la
-    // regla de negocio real (el cliente no debe distinguir SETUP de ORGANIZING ni enterarse
+    // regla de negocio real (el cliente no debe distinguir SETUP de CREATED ni enterarse
     // de que su proyecto está bloqueado internamente) y merece fallar con un nombre legible.
     expect(ALL_STATUSES.filter((s) => getClientPhase(s) === 'PREPARATION').sort()).toEqual(
-      ['INCOMING', 'ON_HOLD_BLOCKED', 'ORGANIZING', 'SETUP'],
+      ['CREATED', 'ON_HOLD_BLOCKED', 'SETUP'],
     )
   })
 
-  it('no filtra al cliente en qué validación interna concreta está el proyecto', () => {
-    // Los tres estatus de validación interna colapsan a un único 'REVIEW'. Si uno se
-    // escapase a su propia fase, el cliente vería el detalle del proceso interno.
+  it('no filtra al cliente en qué puerta de validación concreta está el proyecto', () => {
+    // Las dos puertas colapsan a un único 'REVIEW'. Si una se escapase a su propia
+    // fase, el cliente vería que su proyecto está esperando específicamente al
+    // director artístico — detalle interno que no le corresponde.
     expect(ALL_STATUSES.filter((s) => getClientPhase(s) === 'REVIEW').sort()).toEqual([
-      'READY_FINAL_VALIDATION',
-      'WAITING_AESTHETIC_VALIDATION',
-      'WAITING_TECHNICAL_VALIDATION',
+      'GATE_1',
+      'GATE_2',
     ])
   })
 
@@ -292,11 +304,12 @@ describe('isVisibleStatusChange', () => {
   it('oculta los movimientos internos dentro de la misma fase', () => {
     // Estos son los casos que justifican la función: el equipo mueve el proyecto por su
     // pipeline interno y el cliente no debe recibir ruido por cada paso.
-    expect(isVisibleStatusChange('SETUP', 'INCOMING')).toBe(false)
-    expect(isVisibleStatusChange('INCOMING', 'ORGANIZING')).toBe(false)
-    expect(isVisibleStatusChange('ORGANIZING', 'ON_HOLD_BLOCKED')).toBe(false)
-    expect(isVisibleStatusChange('WAITING_AESTHETIC_VALIDATION', 'WAITING_TECHNICAL_VALIDATION')).toBe(false)
-    expect(isVisibleStatusChange('WAITING_TECHNICAL_VALIDATION', 'READY_FINAL_VALIDATION')).toBe(false)
+    expect(isVisibleStatusChange('SETUP', 'CREATED')).toBe(false)
+    expect(isVisibleStatusChange('CREATED', 'ON_HOLD_BLOCKED')).toBe(false)
+    // El salto de puerta es el caso central: pasar de la revisión de coordinación
+    // a la certificación del director artístico es movimiento nuestro, no suyo.
+    expect(isVisibleStatusChange('GATE_1', 'GATE_2')).toBe(false)
+    expect(isVisibleStatusChange('GATE_2', 'GATE_1')).toBe(false)
   })
 
   it('un bloqueo interno no se le anuncia al cliente', () => {
@@ -307,9 +320,9 @@ describe('isVisibleStatusChange', () => {
   })
 
   it('muestra los saltos de fase que sí le importan al cliente', () => {
-    expect(isVisibleStatusChange('ORGANIZING', 'IN_PRODUCTION')).toBe(true)
-    expect(isVisibleStatusChange('IN_PRODUCTION', 'WAITING_AESTHETIC_VALIDATION')).toBe(true)
-    expect(isVisibleStatusChange('READY_FINAL_VALIDATION', 'SENT_TO_CLIENT')).toBe(true)
+    expect(isVisibleStatusChange('CREATED', 'IN_PRODUCTION')).toBe(true)
+    expect(isVisibleStatusChange('IN_PRODUCTION', 'GATE_1')).toBe(true)
+    expect(isVisibleStatusChange('GATE_2', 'SENT_TO_CLIENT')).toBe(true)
     expect(isVisibleStatusChange('SENT_TO_CLIENT', 'ARCHIVED')).toBe(true)
   })
 

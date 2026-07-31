@@ -16,10 +16,9 @@ datasource db {
 // ══════════════════════════════════════════════
 
 enum UserRole {
-  ARTISTIC_CREATOR    // Alonso — creative director, final gate
+  ARTISTIC_CREATOR    // Alonso — creative director, final gate (gate 2)
   COORDINATOR         // Mar — ops manager, full pipeline
-  LEAD_AESTHETIC      // Flavien — aesthetic validation (gate 1)
-  LEAD_TECHNICAL      // Zach — technical validation (gate 2)
+  CHEF_PROJECT        // Jefe de proyecto — puede subir tareas de producción a Gate 1
   DESIGNER            // Execution team
   SUPPORT             // Ximena — comms, marketing
   ADMINISTRATIVE      // Marjorie — invoicing, admin
@@ -28,13 +27,11 @@ enum UserRole {
 
 enum ProjectStatus {
   SETUP
-  INCOMING
-  ORGANIZING
-  IN_PRODUCTION
-  WAITING_AESTHETIC_VALIDATION
-  WAITING_TECHNICAL_VALIDATION
-  READY_FINAL_VALIDATION
-  SENT_TO_CLIENT
+  CREATED              // Proyecto creado por coordinador
+  IN_PRODUCTION        // En producción
+  GATE_1               // Validación por coordinador
+  GATE_2               // Certificación por Alonso (directeur artistique)
+  SENT_TO_CLIENT       // Enviado al cliente
   ON_HOLD_BLOCKED
   ARCHIVED
 }
@@ -42,8 +39,7 @@ enum ProjectStatus {
 enum ProjectPhase {
   ORGANIZATION
   PRODUCTION
-  AESTHETIC
-  TECHNICAL
+  VALIDATION
   FINAL
 }
 
@@ -74,6 +70,37 @@ enum RiskType {
   AESTHETIC
   TECHNICAL
   EXTERNAL
+}
+
+enum ApprovalType {
+  FILE_REVIEW
+  VIDEO_REVIEW
+  CONCEPT_APPROVAL
+  FINAL_DELIVERY
+}
+
+enum Language {
+  FR
+  EN
+  ES
+  IT
+  DE
+  PT
+}
+
+enum Availability {
+  FULL_TIME
+  PART_TIME
+  FREELANCE
+  INTERN
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+  MASTER
 }
 
 // ══════════════════════════════════════════════
@@ -128,7 +155,31 @@ model User {
   role          UserRole
   avatar        String?
   image         String?   // NextAuth compatibility
+  phone           String?
+  preferredLang   String    @default("fr")
+  lastLoginAt     DateTime?
+  notificationPrefs Json?   // { email: true, whatsapp: true, inApp: true }
   isActive      Boolean   @default(true)
+  passwordHash  String?   // bcrypt hash — only QA users have this set (qa.*@bureautonalli.com)
+
+  // Profile fields (populated during onboarding)
+  bio            String?       @db.Text
+  jobTitle       String?
+  areas          String[]
+  capabilities   String[]
+  workAreas      String[]
+  motivation     String?       @db.Text
+  notes          String?       @db.Text
+  processes      String[]
+  languages      Language[]    @default([])
+  availability   Availability?
+  linkedinUrl    String?
+  portfolioUrl   String?
+  birthDate      DateTime?
+  // Weekly working hours (July spec 1.2 capacity MVP). Null = default 35h
+  // (see DEFAULT_WEEKLY_HOURS in src/lib/schedule-engine.ts).
+  weeklyHours    Int?
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -137,14 +188,15 @@ model User {
   sessions Session[]
 
   // Project relations
-  ownedTasks       Task[]    @relation("TaskOwner")
   validatedTasks   Task[]    @relation("TaskValidator")
+  taskAssignments  TaskAssignment[]
   opsProjects      Project[] @relation("ProjectOpsOwner")
-  leadAestheticFor Project[] @relation("ProjectLeadAesthetic")
-  leadTechnicalFor Project[] @relation("ProjectLeadTechnical")
+  managedProjects  Project[] @relation("ProjectManager")
+  projectTeams     Project[] @relation("ProjectTeamMembers")
 
   // Other relations
-  timeEntries     TimeEntry[]
+  timeEntries      TimeEntry[]
+  timeClockEntries TimeClockEntry[]
   comments        Comment[]
   notifications   Notification[]
   aiConversations AIConversation[]
@@ -153,26 +205,101 @@ model User {
   activityLogs        ActivityLog[]
   integrationConfigs  IntegrationConfig[]
 
+  // Phase 2 relations
+  whatsappMessages   WhatsAppMessage[]   @relation("WhatsAppSender")
+  clientActivityLogs ClientActivityLog[] @relation("ClientActivityTrigger")
+
+  // Onboarding relations
+  invitationsSent    UserInvitation[] @relation("InvitationsSent")
+  invitationConsumed UserInvitation?  @relation("InvitationConsumed")
+  skills             UserSkill[]
+
   // Client contact relation (for CLIENT_CONTACT role)
   clientId String?
   client   Client? @relation("ClientContacts", fields: [clientId], references: [id])
+
+  featureFlagChanges FeatureFlag[]
+
+  dmParticipations DMParticipant[]
+  dmMessagesSent   DMMessage[]
+
+  projectChatReads ProjectChatReadState[]
+}
+
+model UserInvitation {
+  id           String    @id @default(cuid())
+  token        String    @unique @default(uuid())
+  email        String
+  roleAssigned UserRole
+  createdById  String
+  createdBy    User      @relation("InvitationsSent", fields: [createdById], references: [id])
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime
+  usedAt       DateTime?
+  consumedById String?   @unique
+  consumedBy   User?     @relation("InvitationConsumed", fields: [consumedById], references: [id])
+
+  @@index([token])
+  @@index([email])
+}
+
+model Skill {
+  id       String      @id @default(cuid())
+  name     String      @unique
+  category String
+  users    UserSkill[]
+
+  @@index([category])
+}
+
+model UserSkill {
+  id      String     @id @default(cuid())
+  userId  String
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId String
+  skill   Skill      @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  level   SkillLevel @default(INTERMEDIATE)
+
+  @@unique([userId, skillId])
+  @@index([userId])
+  @@index([skillId])
 }
 
 model Client {
   id        String   @id @default(cuid())
   name      String
-  email     String
+  email     String?
   logo      String?
   website   String?
-  industry  String?
+  industry       String?
+  primaryColor   String?          // Color de la marca para theming
+  secondaryColor String?
+  portalLanguage String   @default("fr") // "fr", "en", "es"
+  whatsappNumber String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Hierarchy (marca <-> submarcas)
+  parentId String?
+  parent   Client?  @relation("ClientHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Client[] @relation("ClientHierarchy")
+
+  // Dropbox numbering + path (source of truth: Excel curado)
+  dropboxNumber String  // 2-digit string: "00", "01", etc.
+  dropboxPath   String  @unique
 
   // Relations
   contacts    User[]       @relation("ClientContacts")
   projects    Project[]
   invoices    Invoice[]
   brandAssets BrandAsset[]
+
+  // Phase 2 relations
+  whatsappThreads    WhatsAppThread[]
+  clientActivityLogs ClientActivityLog[]
+
+  @@unique([parentId, dropboxNumber])
+  @@index([parentId])
 }
 
 model Project {
@@ -183,6 +310,7 @@ model Project {
   currentPhase ProjectPhase  @default(ORGANIZATION)
   priority     Int           @default(2) // 1=urgent, 2=normal, 3=low
   risk         RiskType      @default(NONE)
+  color        String?
   startDate    DateTime?
   deadline     DateTime?
   budget       Float?
@@ -195,12 +323,16 @@ model Project {
   clientId String
 
   // Team assignments
-  opsOwner        User   @relation("ProjectOpsOwner", fields: [opsOwnerId], references: [id])
-  opsOwnerId      String
-  leadAesthetic   User   @relation("ProjectLeadAesthetic", fields: [leadAestheticId], references: [id])
-  leadAestheticId String
-  leadTechnical   User   @relation("ProjectLeadTechnical", fields: [leadTechnicalId], references: [id])
-  leadTechnicalId String
+  opsOwner          User    @relation("ProjectOpsOwner", fields: [opsOwnerId], references: [id])
+  opsOwnerId        String
+  projectManager    User?   @relation("ProjectManager", fields: [projectManagerId], references: [id])
+  projectManagerId  String?
+  teamMembers       User[]  @relation("ProjectTeamMembers")
+
+  // Phase 2 fields
+  clientVisibleNotes String?
+  estimatedDelivery  DateTime?
+  completionPercent  Int       @default(0)
 
   // Related data
   tasks        Task[]
@@ -209,14 +341,40 @@ model Project {
   invoices     Invoice[]
   timeEntries  TimeEntry[]
   activityLogs ActivityLog[]
+  comments     Comment[]
+  chatReads    ProjectChatReadState[]
+
+  // Phase 2 relations
+  whatsappThreads    WhatsAppThread[]
+  clientActivityLogs ClientActivityLog[]
 
   // External IDs (integration sync)
-  motionProjectId String?
-  dropboxFolderId String?
+  motionProjectId      String?
+  dropboxFolderId      String?
+  // Unique: two projects sharing one physical folder is the failure this
+  // guards. PostgreSQL treats NULLs as distinct, so the projects that have no
+  // folder yet coexist — which is why a PARTIAL index (WHERE ... IS NOT NULL)
+  // would buy nothing here except permanent `migrate dev` drift, since Prisma
+  // cannot express one. It is also what makes the v8 NN- allocation race-safe:
+  // two concurrent creates that compute the same number collide in the DB
+  // instead of both writing folders into Dropbox.
+  dropboxFolderPath    String?  @unique // e.g. "/05-Brands-App/01-LOREAL/01-YSL-BEAUTE/01-Missions/01-CAMPAGNE"
+  // Written by the v5/v6 flow, then abandoned when v7 stopped needing it. v8
+  // resurrects it as the source of the NN- prefix of the project folder.
+  // Stored zero-padded ("01"), enforced by a CHECK — the unique below is on
+  // the raw text, so without it '1', '01' and '001' would be three legal rows
+  // all rendering the same physical folder.
+  dropboxProjectNumber String?  // 2-digit string ("01", "02", ...) — DB is source of truth
+  dropboxStructureVersion Int @default(1) // 1 = árbol v5 legacy · 3 = árbol v7 (catálogo inglés, estampado solo tras árbol verificado) · 2 = v6, muerto (código eliminado; proyectos v2 purgados)
+  dropboxConfig Json? // Selección del wizard v7 (DropboxConfigV7) — null en v5 legacy
 
   @@index([clientId])
   @@index([status])
   @@index([opsOwnerId])
+  // The NN- prefix has to be unique inside the client's 00-MISSIONS folder.
+  // Legacy rows are NULL and PostgreSQL treats NULLs as distinct, so the v5/v7
+  // projects that never got a number coexist without colliding.
+  @@unique([clientId, dropboxProjectNumber])
 }
 
 model Task {
@@ -227,33 +385,73 @@ model Task {
   type             TaskType
   validationStatus ValidationStatus @default(NOT_REQUIRED)
   priority         Int              @default(2)
+  // Estimated duration in minutes (July spec 1.1). Entered at creation
+  // ("this task takes 2hr"), editable later; feeds calendar/capacity.
+  estimatedMinutes Int?
   dueDate          DateTime?
   completedAt      DateTime?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  // Dual assignment: owner executes, validator reviews
-  // RULE: ownerId != validatorId (enforced in API)
-  owner       User    @relation("TaskOwner", fields: [ownerId], references: [id])
-  ownerId     String
+  // Multi-owner via TaskAssignment (assignments[]). Validator reviews.
+  // RULE: validator must not be in assignments (enforced in API)
   validator   User?   @relation("TaskValidator", fields: [validatorId], references: [id])
   validatorId String?
+
+  // Optional single prerequisite (July spec 1.3): this task cannot start
+  // (TO_DO -> IN_PROGRESS) until dependsOn is validated. Trigger is
+  // VALIDATION (or DONE without validator), not merely DONE — enforced in API.
+  dependsOn   Task?   @relation("TaskDependency", fields: [dependsOnId], references: [id], onDelete: SetNull)
+  dependsOnId String?
+  dependents  Task[]  @relation("TaskDependency")
 
   // Project
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId String
 
   // Related data
-  timeEntries TimeEntry[]
-  comments    Comment[]
+  timeEntries   TimeEntry[]
+  comments      Comment[]
+  notifications Notification[]
+  assignments   TaskAssignment[]
+  files         FileVersion[]
 
   // External IDs
   motionTaskId String?
 
+  // ── Dropbox v8 (árbol task-centric) ──────────────────────────────────────
+  // Every column is nullable and stays NULL for the tasks of v5/v7 projects:
+  // those trees have no folder per task, and a number without a folder is a
+  // promise the resolver cannot tell apart from a real one. No backfill.
+  dropboxNumber     Int?    // ordinal contiguo dentro del proyecto; se renderiza pad2
+  // Physical path of the NN-(task) folder. Decisión B extendida al task: at
+  // resolve time the task segment is derived from this path, never from
+  // `name` — renaming a task must not split the subtree already on disk nor
+  // the filenames the designer copied from it.
+  dropboxFolderPath String?
+  dropboxConfig     Json?   // TaskConfigV8: { production[], productionCustom[] }
+  // UNUSED since 26-jul-2026 — nothing reads or writes it. It was the
+  // denormalized copy of a shot COUNT, and that count turned out not to exist:
+  // the shots are the frames a render happens to produce, unknown when the task
+  // starts, and saved by the designer from their 3D software rather than by us
+  // (Raúl, docs/spec-estructura-2026-07/RESPUESTAS-RAUL.md §12·14·15).
+  // Left in place on purpose: the column ships in the migration that creates the
+  // rest of this block, it is nullable and empty, and dropping it would cost a
+  // destructive migration against production for no gain. Do not resurrect it —
+  // if a shot ever needs counting, count the folders.
+  shotCount         Int?
+
   @@index([projectId])
-  @@index([ownerId])
   @@index([validatorId])
   @@index([status])
+  @@index([dependsOnId])
+  // The number is frozen at creation and never renumbered — deleting a task in
+  // the middle leaves a hole on purpose, because renumbering would move folders
+  // the designer is already saving into. This unique is what turns a losing
+  // race into a DB error instead of two tasks claiming the same NN- folder.
+  // v7 tasks all carry NULL and PostgreSQL treats NULLs as distinct, so they
+  // never collide with each other.
+  @@unique([projectId, dropboxNumber])
 }
 
 // ══════════════════════════════════════════════
@@ -261,11 +459,16 @@ model Task {
 // ══════════════════════════════════════════════
 
 model Approval {
-  id         String    @id @default(cuid())
-  status     String    @default("PENDING") // PENDING, APPROVED, REJECTED, REVISION_REQUESTED
-  feedback   String?
-  reviewedAt DateTime?
-  createdAt  DateTime  @default(now())
+  id             String       @id @default(cuid())
+  status         String       @default("PENDING") // PENDING, APPROVED, REJECTED, REVISION_REQUESTED
+  type           ApprovalType @default(FILE_REVIEW)
+  feedback       String?
+  annotations    Json?        // [{x, y, width, height, comment}]
+  dueDate        DateTime?
+  reminderSent   Boolean      @default(false)
+  clientViewedAt DateTime?
+  reviewedAt     DateTime?
+  createdAt      DateTime     @default(now())
 
   project   Project @relation(fields: [projectId], references: [id])
   projectId String
@@ -289,22 +492,67 @@ model FileVersion {
   size         Int      // Bytes
   version      Int      @default(1)
   storageUrl   String   // R2 or Dropbox URL
-  thumbnailUrl String?  // Preview in R2
+  /// @deprecated post-Bug #1 (15may26): thumbnails are now fetched
+  /// on-demand from /api/internal/dropbox/thumbnail using storageUrl.
+  /// Field retained for back-compat — never set in the new flow.
+  thumbnailUrl String?
   createdAt    DateTime @default(now())
+
+  // ── Clasificación declarada en la subida (Tren 7, estructura v8) ──────────
+  // Todo nullable y sin backfill: las filas v5/v7 se subieron sin declarar
+  // nada y su destino ya está congelado en storageUrl. Se persiste lo que el
+  // uploader DECLARÓ, no lo que se dedujo, para que la entrega al cliente no
+  // tenga que volver a adivinar (y no vuelva a pedir el ratio en un reenvío).
+  //
+  // Por qué existe `codec` pese a que la extensión "ya lo dice": no lo dice.
+  // formatFolderForFile mapeaba .mov→PRORES y .mp4→H264 SIEMPRE, así que un
+  // ProRes exportado a .mp4 aterrizaba en la carpeta equivocada. El valor
+  // declarado gana sobre la inferencia; ausente, se sigue infiriendo.
+  mediaType    String? // IMAGE | VIDEO | VECTOR | RENDERS (respuesta Raúl 8)
+  ratio        String? // Libre y normalizado ('21X9'), no un enum (respuesta Raúl 4)
+  codec        String? // H264 | PRORES | … — gana a la inferencia por extensión
+  phase        String? // PRODUCTION | EXPORTS — la FASE decide (respuesta Raúl 11)
+  program      String? // C4D | BLENDER | HOUDINI | custom
+  shot         String? // 'SHOT_010' cuando el archivo cuelga de un shot
+  contentLabel String? // Etiqueta libre del entregable ('Hero', 'Packshot')
+
+  /// Etiqueta de versión para el NOMBRE de archivo ('V001'), contada POR
+  /// ENTREGABLE — bucket (mediaType, ratio, codec), los tres campos que llegan
+  /// al nombre. El 16×9 y el 9×16 del mismo hero arrancan cada uno en V001.
+  /// Decidido por Raúl el 29 jul 2026: "si el diseñador entrega el mismo héroe
+  /// en 2 formatos no tiene sentido resolverles las versiones ya que no es el
+  /// mismo entregable".
+  ///
+  /// Deliberadamente NO es `version`: ese sigue siendo el contador lineal por
+  /// task que sostiene @@unique([taskId, version]) y el retry anti-race de
+  /// /complete. Esa separación (decisión #11 del plan) es lo que hizo que pasar
+  /// de versionado lineal a por-entregable costara UNA consulta en vez de
+  /// romper la unique y con ella las 418 líneas de task-files-complete-race.
+  versionLabel String?
 
   project   Project @relation(fields: [projectId], references: [id])
   projectId String
+
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  taskId String?
 
   uploader   User   @relation("FileUploader", fields: [uploaderId], references: [id])
   uploaderId String
 
   approvals Approval[]
+  reviewComments Comment[]
 
   // External IDs
   dropboxFileId  String?
   frameIoAssetId String?
 
   @@index([projectId])
+  @@index([taskId])
+  // Linear versioning per task. PostgreSQL treats multiple NULL taskId rows
+  // as distinct, so client-side assets (taskId=null) are unaffected. Guards
+  // the /tasks/[id]/files init+complete race (two concurrent inits compute
+  // the same version → /complete retries with a bumped version).
+  @@unique([taskId, version], name: "FileVersion_taskId_version_key")
 }
 
 model TimeEntry {
@@ -330,6 +578,26 @@ model TimeEntry {
   @@index([projectId])
 }
 
+// In-platform attendance clock (July spec 5 — "checador amigable").
+// Deliberately separate from TimeEntry (per-task work time, fed by Jibble
+// sync and load-bearing for the HAS_TIME_ENTRIES delete guard).
+// clockOutAt IS NULL = currently clocked in. Single-open-session is
+// enforced in the API inside a transaction.
+model TimeClockEntry {
+  id         String    @id @default(cuid())
+  clockInAt  DateTime  @default(now())
+  clockOutAt DateTime?
+  note       String?
+  source     String    @default("MANUAL") // MANUAL (in-app) | JIBBLE (future sync)
+  createdAt  DateTime  @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  @@index([userId, clockInAt])
+  @@index([userId, clockOutAt])
+}
+
 model Invoice {
   id          String    @id @default(cuid())
   number      String    @unique
@@ -352,7 +620,7 @@ model Invoice {
   projectId String?
 
   // External IDs
-  evolizInvoiceId String?
+  evolizInvoiceId String?  @unique
   stripeInvoiceId String?
 
   @@index([clientId])
@@ -386,25 +654,47 @@ model Comment {
   taskId     String?
   approval   Approval? @relation(fields: [approvalId], references: [id])
   approvalId String?
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId  String?
+  fileVersion    FileVersion? @relation(fields: [fileVersionId], references: [id], onDelete: SetNull)
+  fileVersionId  String?
+  videoTimestamp Float?   // Segundos del video donde se ancla el comentario (review estilo Frame)
+  /// Visual annotations anchored to videoTimestamp. Array of normalized shapes
+  /// (0-1 coords relative to the visible video area). 6a: only { type:'rect', x,y,w,h,color }.
+  annotations    Json?
+  attachment Json? // Discussion (chat) reference media: {filename, storageUrl, dropboxFileId, mimeType}. Display-only; NO crea FileVersion.
+
+  resolved Boolean   @default(false)
+  parentId String?
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies  Comment[] @relation("CommentReplies")
 
   @@index([taskId])
   @@index([authorId])
+  @@index([projectId])
+  @@index([fileVersionId])
+  @@index([parentId])
 }
 
 model Notification {
   id        String   @id @default(cuid())
-  type      String   // TASK_ASSIGNED, VALIDATION_PENDING, VALIDATION_APPROVED, VALIDATION_REJECTED, DEADLINE_WARNING, OVERLOADED, etc.
+  type      String   // TASK_ASSIGNED, VALIDATION_PENDING, VALIDATION_APPROVED, VALIDATION_REJECTED, DEADLINE_WARNING, OVERLOADED, DM_RECEIVED, etc.
   title     String
   message   String
   channel   String   // IN_APP, EMAIL, SLACK, WHATSAPP
   isRead    Boolean  @default(false)
+  readAt    DateTime? // When the user attended it (July spec 3 — persistent tray)
   createdAt DateTime @default(now())
+  metadata  Json?    // Arbitrary payload: { conversationId } for DM_RECEIVED, etc.
 
   user      User   @relation(fields: [userId], references: [id])
   userId    String
   projectId String?
+  taskId    String?
+  task      Task?  @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
   @@index([userId, isRead])
+  @@index([taskId])
 }
 
 model AIConversation {
@@ -450,4 +740,149 @@ model ActivityLog {
   @@index([projectId])
   @@index([userId])
   @@index([createdAt])
+}
+
+// ══════════════════════════════════════════════
+// PHASE 2 — CLIENT PORTAL MODELS
+// ══════════════════════════════════════════════
+
+model WhatsAppThread {
+  id              String    @id @default(cuid())
+  twilioSid       String    @unique
+  status          String    @default("ACTIVE") // ACTIVE, ARCHIVED
+  lastMessageAt   DateTime?
+  createdAt       DateTime  @default(now())
+
+  client          Client    @relation(fields: [clientId], references: [id])
+  clientId        String
+
+  project         Project?  @relation(fields: [projectId], references: [id])
+  projectId       String?
+
+  messages        WhatsAppMessage[]
+
+  @@index([clientId])
+  @@index([projectId])
+}
+
+model WhatsAppMessage {
+  id               String   @id @default(cuid())
+  twilioMessageSid String   @unique
+  direction        String   // INBOUND, OUTBOUND
+  body             String
+  mediaUrl         String?
+  mediaType        String?
+  senderPhone      String
+  senderName       String?
+  status           String   @default("SENT") // SENT, DELIVERED, READ, FAILED
+  createdAt        DateTime @default(now())
+
+  thread           WhatsAppThread @relation(fields: [threadId], references: [id])
+  threadId         String
+
+  sentBy           User?    @relation("WhatsAppSender", fields: [sentById], references: [id])
+  sentById         String?
+
+  @@index([threadId])
+  @@index([createdAt])
+}
+
+model ClientActivityLog {
+  id              String   @id @default(cuid())
+  type            String   // PROJECT_UPDATE, FILE_UPLOADED, APPROVAL_REQUESTED, INVOICE_SENT, MESSAGE_RECEIVED, STATUS_CHANGE
+  title           String
+  description     String?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  client          Client   @relation(fields: [clientId], references: [id])
+  clientId        String
+
+  project         Project? @relation(fields: [projectId], references: [id])
+  projectId       String?
+
+  triggeredBy     User?    @relation("ClientActivityTrigger", fields: [triggeredById], references: [id])
+  triggeredById   String?
+
+  @@index([clientId, createdAt])
+  @@index([projectId])
+}
+
+
+model FeatureFlag {
+  name        String   @id
+  enabled     Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+  updatedBy   User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+}
+
+
+model DMConversation {
+  id            String    @id @default(cuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastMessageAt DateTime?
+
+  participants DMParticipant[]
+  messages     DMMessage[]
+
+  @@index([lastMessageAt])
+}
+
+model DMParticipant {
+  id             String    @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  joinedAt       DateTime  @default(now())
+
+  conversation DMConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model DMMessage {
+  id             String    @id @default(cuid())
+  conversationId String
+  authorId       String
+  content        String    @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  editedAt       DateTime?
+
+  conversation DMConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author       User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+
+model ProjectChatReadState {
+  projectId  String
+  userId     String
+  lastReadAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@index([userId])
+}
+
+model TaskAssignment {
+  id     String @id @default(cuid())
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId String
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  assignedAt DateTime @default(now())
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
 }

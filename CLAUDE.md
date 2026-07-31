@@ -4,7 +4,31 @@
 
 Portal externo (cliente) de Bureau Tonalli, una agencia creativa de moda de lujo en París. Este portal permite a los clientes (Givenchy, Cartier, Louis Vuitton, etc.) ver el estado de sus proyectos, aprobar/rechazar entregables, y consultar los activos de su marca.
 
-**Este repositorio es SOLO el portal del cliente.** El portal interno del equipo vive en un repo separado (`tonalli-internal`). Ambos comparten la misma base de datos Supabase (PostgreSQL).
+**Este repositorio es SOLO el portal del cliente.** El portal interno del equipo vive en un repo separado (`memorx/tonalli`, en disco `../bureau-tonalli`). Ambos comparten la misma base de datos Supabase (PostgreSQL).
+
+### El esquema se comparte de verdad, y hay que mantenerlo así
+
+`prisma/schema.prisma` tiene que ser **byte a byte idéntico** al del portal
+interno. Durante meses no lo fue, y no era un detalle de higiene: faltaban 13
+modelos, 8 de los 17 modelos compartidos tenían campos distintos, y este repo
+declaraba tres columnas que la base ya no tiene (`Task.ownerId`,
+`Project.leadAestheticId`, `leadTechnicalId` — comprobado contra
+`information_schema`).
+
+No reventaba de milagro: todas las consultas usan `select` explícito con
+campos que sobrevivieron. La primera consulta sin `select` que alguien
+escribiera —lo más natural del mundo— habría dado un 500 en producción. Y sí
+escondía un bug real: el mapa de fases (arriba).
+
+Lo vigila `tests/lib/schema-sync.test.ts`, que compara los dos archivos cuando
+el repo interno está al lado y, si no, fija los enums a mano.
+
+**Este repo no siembra ni migra.** Tenía un `seed.ts` propio de 505 líneas,
+distinto del interno, apuntando a la misma base de producción. Referenciaba
+campos borrados, así que ni corría — pero seguía cableado en `package.json`.
+Sembrar y migrar son trabajo del portal interno, que es quien posee las
+migraciones. Migrar desde aquí sería peor: Prisma vería tablas que este
+esquema no declara y propondría borrarlas.
 
 **Idioma de la UI:** Francés.
 
@@ -20,7 +44,7 @@ Portal externo (cliente) de Bureau Tonalli, una agencia creativa de moda de lujo
 | ORM | Prisma 7 (driver adapters) | Schema shared with internal portal |
 | Auth | NextAuth.js v5 (Auth.js) | Google OAuth, JWT strategy |
 | Validation | Zod | Request validation |
-| Testing | Vitest 4 | 228 tests en 9 archivos, entorno node |
+| Testing | Vitest 4 | 235 tests en 10 archivos, entorno node |
 | Deploy | Vercel | Separate project from internal |
 
 ---
@@ -61,8 +85,8 @@ tonalli-client/
       external-constants.ts  # Nav items, labels, colors (all French)
       constants.ts           # Role labels (for login)
   prisma/
-    schema.prisma            # Full schema (shared with internal)
-    seed.ts                  # Full seed (shared with internal)
+    schema.prisma            # Copia EXACTA del portal interno. Sin seed, sin
+                             # migraciones: eso lo posee el repo interno.
 ```
 
 ---
@@ -75,11 +99,21 @@ The client sees a simplified 5-phase view of project status:
 
 | Internal Status | Client Phase | Client Label |
 |----------------|-------------|-------------|
-| SETUP, INCOMING, ORGANIZING, ON_HOLD_BLOCKED | PREPARATION | En préparation |
+| SETUP, CREATED, ON_HOLD_BLOCKED | PREPARATION | En préparation |
 | IN_PRODUCTION | PRODUCTION | En production |
-| WAITING_AESTHETIC/TECHNICAL_VALIDATION, READY_FINAL | REVIEW | En révision interne |
+| GATE_1, GATE_2 | REVIEW | En révision interne |
 | SENT_TO_CLIENT | YOUR_TURN | En attente de votre validation |
 | ARCHIVED | COMPLETE | Terminé |
+
+Las dos puertas colapsan a un único `REVIEW` a propósito: desde fuera, que el
+proyecto espere a la coordinadora o al director artístico es el mismo momento,
+y el cliente no debe ver nuestra mecánica interna.
+
+**Esta tabla estuvo mal durante meses** y era un bug vivo, no cosmético.
+Listaba los estatus de antes del refactor de 2 puertas y no tenía entrada para
+`GATE_1` ni `GATE_2`, así que `getClientPhase()` devolvía `undefined` y el
+cliente veía la fase en blanco justo en el tramo previo a su entrega. Lo
+tapaba la deriva del esquema — ver abajo.
 
 ### Auth Flow
 
@@ -124,11 +158,11 @@ npx prisma generate
 # 4. Run dev server on port 3001
 PORT=3001 npm run dev
 
-# 5. (Optional) Seed database if starting fresh
-npx prisma db seed
 ```
 
-**Important:** This portal shares the database with the internal portal. If the internal portal has already seeded the database, you do NOT need to re-seed.
+**Important:** This portal shares the database with the internal portal. **No
+sembrar desde aquí**: este repo no tiene seed y no debe tenerlo — es trabajo
+del portal interno. Ver la nota sobre el esquema compartido más arriba.
 
 ---
 
@@ -138,7 +172,7 @@ Only these are needed for the client portal:
 
 ```env
 DATABASE_URL=        # Supabase pooled connection
-DIRECT_URL=          # Supabase direct connection (for migrations/seed)
+DIRECT_URL=          # Supabase direct connection (lo usa Prisma; este repo no migra ni siembra)
 NEXTAUTH_SECRET=     # Same secret as internal portal
 NEXTAUTH_URL=        # http://localhost:3001 (or production URL)
 GOOGLE_CLIENT_ID=    # Google OAuth

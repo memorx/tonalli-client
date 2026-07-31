@@ -2,15 +2,35 @@ import type { ProjectStatus } from '@/generated/prisma/client'
 
 export type ClientPhase = 'PREPARATION' | 'PRODUCTION' | 'REVIEW' | 'YOUR_TURN' | 'COMPLETE'
 
+/**
+ * Los 8 estados internos, traducidos a las 5 fases que ve el cliente.
+ *
+ * Este mapa estaba desactualizado y era un bug vivo, no cosmético. Cubría los
+ * estados de antes del refactor (INCOMING, ORGANIZING, las dos
+ * WAITING_*_VALIDATION y READY_FINAL_VALIDATION) y NO tenía entrada para
+ * CREATED, GATE_1 ni GATE_2 — que son los reales desde hace meses. Un proyecto
+ * en cualquiera de las dos puertas devolvía `undefined` aquí, así que el
+ * cliente veía la fase en blanco justo en el momento que más le importa: el
+ * tramo de validación previo a su entrega.
+ *
+ * Estaba oculto porque el schema.prisma de este repo se había quedado clavado
+ * en el enum viejo, así que TypeScript comparaba contra estados que la base ya
+ * no tiene y no podía avisar. Al sincronizar el esquema con el portal interno,
+ * el compilador lo destapó.
+ *
+ * `Record<ProjectStatus, ...>` es deliberado: si mañana se añade un estado al
+ * enum, esto deja de compilar en vez de devolver undefined en silencio.
+ */
 export const CLIENT_PHASE_MAP: Record<ProjectStatus, ClientPhase> = {
   SETUP: 'PREPARATION',
-  INCOMING: 'PREPARATION',
-  ORGANIZING: 'PREPARATION',
+  CREATED: 'PREPARATION',
   ON_HOLD_BLOCKED: 'PREPARATION',
   IN_PRODUCTION: 'PRODUCTION',
-  WAITING_AESTHETIC_VALIDATION: 'REVIEW',
-  WAITING_TECHNICAL_VALIDATION: 'REVIEW',
-  READY_FINAL_VALIDATION: 'REVIEW',
+  // Las dos puertas son validación INTERNA: Gate 1 la coordinadora, Gate 2 el
+  // director artístico. Desde fuera son el mismo momento —"lo estamos
+  // revisando"— y el cliente no debe ver nuestra mecánica interna.
+  GATE_1: 'REVIEW',
+  GATE_2: 'REVIEW',
   SENT_TO_CLIENT: 'YOUR_TURN',
   ARCHIVED: 'COMPLETE',
 }
