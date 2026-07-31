@@ -142,6 +142,22 @@ export default async function ClientApprovalDetailPage({
           </div>
         )}
 
+        {/* Le mot de Bureau Tonalli qui accompagne la livraison.
+            Rapporté par Raúl (PDF du 30 juil.) : jusqu'ici il n'y avait aucun
+            endroit où écrire au client. Distinct de `feedback`, qui est la
+            réponse DU client — les deux blocs peuvent coexister sur une
+            révision, et les confondre écraserait l'un par l'autre.
+            whitespace-pre-line : les modèles sont écrits en plusieurs
+            paragraphes et sans cela ils arriveraient sur une seule ligne. */}
+        {approval.message && (
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+              Message de Bureau Tonalli
+            </p>
+            <p className="whitespace-pre-line text-sm">{approval.message}</p>
+          </div>
+        )}
+
         {/* Feedback */}
         {approval.feedback && (
           <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4">

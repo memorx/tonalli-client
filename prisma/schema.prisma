@@ -462,6 +462,10 @@ model Approval {
   id             String       @id @default(cuid())
   status         String       @default("PENDING") // PENDING, APPROVED, REJECTED, REVISION_REQUESTED
   type           ApprovalType @default(FILE_REVIEW)
+  // El mensaje que Bureau Tonalli escribe AL ENVIAR (PDF Raúl 30 jul, pág. 6).
+  // No confundir con `feedback`, que es la respuesta DEL cliente: sobrecargar
+  // ese campo pisaría lo que el cliente contesta con lo que le mandamos.
+  message        String?
   feedback       String?
   annotations    Json?        // [{x, y, width, height, comment}]
   dueDate        DateTime?
