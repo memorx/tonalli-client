@@ -595,6 +595,25 @@ model TimeClockEntry {
   source     String    @default("MANUAL") // MANUAL (in-app) | JIBBLE (future sync)
   createdAt  DateTime  @default(now())
 
+  // Pausa ACUMULADA, no una fila por tramo (decisión de Memo, 31 jul). La
+  // alternativa era que una pausa fuera un clockOut + clockIn, sin migración,
+  // pero entonces un día normal se parte en cinco o seis filas y RH —que es
+  // quien va a leer esto— tiene que sumarlas para saber cuánto trabajó
+  // alguien. Una fila por jornada se lee sola.
+  //
+  // `pausedAt` es el inicio de la pausa EN CURSO (null = trabajando).
+  // `pausedMinutes` es lo ya acumulado en pausas cerradas. El tiempo
+  // trabajado sale de restar las dos cosas — ver src/lib/time-clock.ts.
+  pausedAt      DateTime?
+  pausedMinutes Int       @default(0)
+
+  // Último latido del navegador. Sostiene el cierre de seguridad: si alguien
+  // cierra el navegador sin fichar salida, `beforeunload` no es fiable (no
+  // dispara si se va la luz o matan el proceso), así que el servidor cierra
+  // lo que lleve demasiado tiempo sin latir. null = sesión anterior al
+  // latido, que el barrido trata como su clockInAt.
+  lastSeenAt DateTime?
+
   user   User   @relation(fields: [userId], references: [id])
   userId String
 
@@ -828,11 +847,33 @@ model DMConversation {
   updatedAt     DateTime  @updatedAt
   lastMessageAt DateTime?
 
+  // Raúl, 31 jul: «que se pueda tener un canal general», «invitar usuarios a
+  // un chat». El modelo ya admitía N participantes (DMParticipant es tabla de
+  // unión); lo que faltaba era distinguir los tres casos.
+  //
+  //   DIRECT  — 1:1. Sin título: se nombra con el otro participante.
+  //   GROUP   — 3 o más, con título. Se invita explícitamente.
+  //   GENERAL — el canal de toda la casa. Su pertenencia NO se guarda en
+  //             DMParticipant: son todos los usuarios internos. Guardarla
+  //             obligaría a acordarse de meter a cada persona nueva, y el día
+  //             que se olvidara nadie se enteraría — simplemente no vería el
+  //             canal.
+  //
+  //             Que haya UNO SOLO lo garantiza el código (getOrCreateGeneral,
+  //             buscar-o-crear dentro de una transacción), no la base: Postgres
+  //             lo haría con un índice único parcial `WHERE kind = 'GENERAL'`,
+  //             que Prisma no sabe declarar. Está anotado aquí porque es
+  //             justo el tipo de garantía que alguien supondría que existe.
+  kind  String  @default("DIRECT")
+  title String?
+
   participants DMParticipant[]
   messages     DMMessage[]
 
   @@index([lastMessageAt])
+  @@index([kind])
 }
+
 
 model DMParticipant {
   id             String    @id @default(cuid())
